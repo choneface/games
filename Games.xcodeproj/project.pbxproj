@@ -10,6 +10,7 @@
 		017344F32BCC282D00BA5BA3 /* SKColumn.swift in Sources */ = {isa = PBXBuildFile; fileRef = 017344F22BCC282D00BA5BA3 /* SKColumn.swift */; };
 		017344F52BCC92F300BA5BA3 /* GLinkedList.swift in Sources */ = {isa = PBXBuildFile; fileRef = 017344F42BCC92F300BA5BA3 /* GLinkedList.swift */; };
 		017344F72BCCA76D00BA5BA3 /* SKCardTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 017344F62BCCA76D00BA5BA3 /* SKCardTest.swift */; };
+		017344F92BCCC71D00BA5BA3 /* SolitareDeck.swift in Sources */ = {isa = PBXBuildFile; fileRef = 017344F82BCCC71D00BA5BA3 /* SolitareDeck.swift */; };
 		01A961AF2BCAE9EB00023E2B /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01A961AE2BCAE9EB00023E2B /* AppDelegate.swift */; };
 		01A961B12BCAE9EB00023E2B /* GameScene.sks in Resources */ = {isa = PBXBuildFile; fileRef = 01A961B02BCAE9EB00023E2B /* GameScene.sks */; };
 		01A961B32BCAE9EB00023E2B /* Actions.sks in Resources */ = {isa = PBXBuildFile; fileRef = 01A961B22BCAE9EB00023E2B /* Actions.sks */; };
@@ -45,6 +46,7 @@
 		017344F22BCC282D00BA5BA3 /* SKColumn.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SKColumn.swift; sourceTree = "<group>"; };
 		017344F42BCC92F300BA5BA3 /* GLinkedList.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GLinkedList.swift; sourceTree = "<group>"; };
 		017344F62BCCA76D00BA5BA3 /* SKCardTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SKCardTest.swift; sourceTree = "<group>"; };
+		017344F82BCCC71D00BA5BA3 /* SolitareDeck.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SolitareDeck.swift; sourceTree = "<group>"; };
 		01A961AB2BCAE9EB00023E2B /* Games.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Games.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		01A961AE2BCAE9EB00023E2B /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		01A961B02BCAE9EB00023E2B /* GameScene.sks */ = {isa = PBXFileReference; lastKnownFileType = file.sks; path = GameScene.sks; sourceTree = "<group>"; };
@@ -121,6 +123,7 @@
 				01A962172BCAF18400023E2B /* SKCard.swift */,
 				017344F22BCC282D00BA5BA3 /* SKColumn.swift */,
 				017344F42BCC92F300BA5BA3 /* GLinkedList.swift */,
+				017344F82BCCC71D00BA5BA3 /* SolitareDeck.swift */,
 			);
 			path = Games;
 			sourceTree = "<group>";
@@ -280,6 +283,7 @@
 				01A961B72BCAE9EB00023E2B /* GameViewController.swift in Sources */,
 				017344F52BCC92F300BA5BA3 /* GLinkedList.swift in Sources */,
 				01A961AF2BCAE9EB00023E2B /* AppDelegate.swift in Sources */,
+				017344F92BCCC71D00BA5BA3 /* SolitareDeck.swift in Sources */,
 				01A962182BCAF18400023E2B /* SKCard.swift in Sources */,
 				017344F32BCC282D00BA5BA3 /* SKColumn.swift in Sources */,
 			);
