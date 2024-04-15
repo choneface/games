@@ -14,13 +14,17 @@ class SKCard : SKShapeNode {
     var tapped = false
     var covered = false
     var cardDto : CardDTO?
+    var sprite: SKSpriteNode?
     
     func define(cardDto: CardDTO) {
         self.cardDto = cardDto;
+        self.sprite = SKSpriteNode(imageNamed: getCardImageName(cardDto: cardDto))
+        self.sprite?.size = self.frame.size
         
         self.fillColor = cardDto.color
         self.strokeColor = SKColor.yellow
         self.lineWidth = 0
+        self.addChild(self.sprite!)
     }
     
     func move(location : CGPoint) {
@@ -36,6 +40,29 @@ class SKCard : SKShapeNode {
         tapped = !tapped 
     }
     
+    private func getCardImageName(cardDto: CardDTO) -> String {
+        if cardDto.suit == .none {
+            return "card back side"
+        }
+        
+        var num = ""
+        switch cardDto.number {
+        case 1:
+            num = "A"
+            break
+        case 11:
+            num = "J"
+            break
+        case 12:
+            num = "K"
+            break
+        default:
+            num = String(cardDto.number)
+        }
+        
+        return num + " " + cardDto.suit.rawValue
+    }
+    
     func printSelf() {
         let number = cardDto?.number ?? 0
         let suit = cardDto?.suit ?? .none
@@ -48,10 +75,10 @@ class SKCard : SKShapeNode {
 
 enum Suit: String {
     case none = "none"
-    case hearts = "Hearts"
-    case diamonds = "Diamonds"
-    case clubs = "Clubs"
-    case spades = "Spades"
+    case hearts = "heart"
+    case diamonds = "diamond"
+    case clubs = "clubs"
+    case spades = "spade"
 }
 
 struct CardDTO {
