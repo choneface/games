@@ -30,9 +30,12 @@ class GameScene: SKScene {
             
             // Make card
             let c = SKCard.init(rectOf: CGSize.init(width: w, height: w*1.4), cornerRadius: w * 0.3)
-            c.set(suit: Suit.hearts, color: SKColor.red, number: 2)
+            let cdata = CardDTO(suit: Suit.hearts, color: SKColor.red, number: 2)
+            c.define(cardDto: cdata)
+            
             let c1 = SKCard.init(rectOf: CGSize.init(width: w, height: w*1.4), cornerRadius: w * 0.3)
-            c1.set(suit: Suit.spades, color: SKColor.black, number: 2)
+            let c1data = CardDTO(suit: Suit.spades, color: SKColor.black, number: 2)
+            c1.define(cardDto: c1data)
 
             
             
