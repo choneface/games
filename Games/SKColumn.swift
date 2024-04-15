@@ -49,9 +49,9 @@ class SKColumn : SKShapeNode, Sequence {
     
     func calcNextCardPosition(card: SKCard){
         if(nextPosition.y == 0) {
-            nextPosition.y = (self.frame.height / 2) - (card.frame.height / 2)
+            nextPosition.y = (self.frame.height / 2) - (card.height / 2)
         } else {
-            nextPosition.y -= (card.frame.height / 5)
+            nextPosition.y -= (card.height / 5)
         }
     }
     
@@ -59,11 +59,13 @@ class SKColumn : SKShapeNode, Sequence {
         if let touch = touches.first {
             let location = touch.location(in: self)
             
+            var top : SKCard?
             for card in self {
                 if card.contains(location) == true {
-                    card.tap()
+                    top = card
                 }
             }
+            top?.tap()
         }
     }
     

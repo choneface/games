@@ -8,24 +8,30 @@
 import Foundation
 import SpriteKit
 
-class SKCard : SKShapeNode {
+class SKCard : SKNode {
     var nextCard: SKCard?
     
     var tapped = false
     var covered = false
+    var height : CGFloat
+    private var cardDto : CardDTO = CardDTO()
+    private var card: SKShapeNode
     
-    var suit : Suit = Suit.none
-    var color : SKColor = SKColor.blue
-    var number : Int = -1
+    // Initialization with an image
+    init(cardDto: CardDTO, size: CGSize, radius: CGFloat, imageName: String) {
+        height = size.height
+        self.cardDto = cardDto
+        
+        card = SKShapeNode(rectOf: size, cornerRadius: radius)
+        card.fillColor = .white
+        card.fillTexture = SKTexture(imageNamed: imageName)
+        
+        super.init()
+        addChild(card)
+    }
     
-    func set(tapped: Bool = false, suit: Suit, color: SKColor, number: Int) {
-        self.tapped = tapped
-        self.suit = suit
-        self.color = color
-        self.number = number
-        self.fillColor = color
-        self.strokeColor = SKColor.yellow
-        self.lineWidth = 0
+    required init?(coder aDecoder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
     }
     
     func move(location : CGPoint) {
@@ -34,14 +40,40 @@ class SKCard : SKShapeNode {
     
     func tap(){
         if(tapped){
-            self.lineWidth = 0
+            card.fillColor = .white
         } else {
-            self.lineWidth = 5
+            card.fillColor = .lightGray
         }
-        tapped = !tapped 
+        tapped = !tapped
+        
+    }
+    
+    private func getCardImageName(cardDto: CardDTO) -> String {
+        if cardDto.suit == .none {
+            return "card back side"
+        }
+        
+        var num = ""
+        switch cardDto.number {
+        case 1:
+            num = "A"
+            break
+        case 11:
+            num = "J"
+            break
+        case 12:
+            num = "K"
+            break
+        default:
+            num = String(cardDto.number)
+        }
+        
+        return num + " " + cardDto.suit.rawValue
     }
     
     func printSelf() {
+        let number = cardDto.number
+        let suit = cardDto.suit
         let tappedStatus = tapped ? "true" : "false"
         let coveredStatus = covered ? "true" : "false"
         let hasNext = next != nil ? "true" : "false"
@@ -51,8 +83,14 @@ class SKCard : SKShapeNode {
 
 enum Suit: String {
     case none = "none"
-    case hearts = "Hearts"
-    case diamonds = "Diamonds"
-    case clubs = "Clubs"
-    case spades = "Spades"
+    case hearts = "heart"
+    case diamonds = "diamond"
+    case clubs = "clubs"
+    case spades = "spade"
+}
+
+struct CardDTO {
+    var suit: Suit = .none
+    var color: SKColor = .blue
+    var number: Int = -1
 }
