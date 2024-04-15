@@ -29,15 +29,14 @@ class GameScene: SKScene {
             col.strokeColor = SKColor.blue
             
             // Make card
-            let c = SKCard.init(rectOf: CGSize.init(width: w, height: w*1.4), cornerRadius: w * 0.3)
+            let cardSize = CGSize.init(width: w, height: w*1.4)
+            let cardCornerRadius = w * 0.1
+            
             let cdata = CardDTO(suit: Suit.hearts, color: SKColor.red, number: 2)
-            c.define(cardDto: cdata)
-            
-            let c1 = SKCard.init(rectOf: CGSize.init(width: w, height: w*1.4), cornerRadius: w * 0.3)
             let c1data = CardDTO(suit: Suit.spades, color: SKColor.black, number: 2)
-            c1.define(cardDto: c1data)
-
             
+            let c = SKCard.init(cardDto: cdata, size: cardSize, radius: cardCornerRadius, imageName: getCardImageName(cardDto: cdata))
+            let c1 = SKCard.init(cardDto: c1data, size: cardSize, radius: cardCornerRadius, imageName: getCardImageName(cardDto: c1data))
             
             col.append(card: c)
             col.append(card: c1)
@@ -87,5 +86,29 @@ class GameScene: SKScene {
     
     override func update(_ currentTime: TimeInterval) {
         // Called before each frame is rendered
+    }
+    
+    // in a perfect world, this isn't gere, welcome to hell 
+    private func getCardImageName(cardDto: CardDTO) -> String {
+        if cardDto.suit == .none {
+            return "card back side"
+        }
+        
+        var num = ""
+        switch cardDto.number {
+        case 1:
+            num = "A"
+            break
+        case 11:
+            num = "J"
+            break
+        case 12:
+            num = "K"
+            break
+        default:
+            num = String(cardDto.number)
+        }
+        
+        return num + " " + cardDto.suit.rawValue
     }
 }

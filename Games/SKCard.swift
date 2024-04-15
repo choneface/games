@@ -8,23 +8,30 @@
 import Foundation
 import SpriteKit
 
-class SKCard : SKShapeNode {
+class SKCard : SKNode {
     var nextCard: SKCard?
     
     var tapped = false
     var covered = false
-    var cardDto : CardDTO?
-    var sprite: SKSpriteNode?
+    var height : CGFloat
+    private var cardDto : CardDTO = CardDTO()
+    private var card: SKShapeNode
     
-    func define(cardDto: CardDTO) {
-        self.cardDto = cardDto;
-        self.sprite = SKSpriteNode(imageNamed: getCardImageName(cardDto: cardDto))
-        self.sprite?.size = self.frame.size
+    // Initialization with an image
+    init(cardDto: CardDTO, size: CGSize, radius: CGFloat, imageName: String) {
+        height = size.height
+        self.cardDto = cardDto
         
-        self.fillColor = cardDto.color
-        self.strokeColor = SKColor.yellow
-        self.lineWidth = 0
-        self.addChild(self.sprite!)
+        card = SKShapeNode(rectOf: size, cornerRadius: radius)
+        card.fillColor = .white
+        card.fillTexture = SKTexture(imageNamed: imageName)
+        
+        super.init()
+        addChild(card)
+    }
+    
+    required init?(coder aDecoder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
     }
     
     func move(location : CGPoint) {
@@ -33,11 +40,12 @@ class SKCard : SKShapeNode {
     
     func tap(){
         if(tapped){
-            self.lineWidth = 0
+            card.fillColor = .white
         } else {
-            self.lineWidth = 5
+            card.fillColor = .lightGray
         }
-        tapped = !tapped 
+        tapped = !tapped
+        
     }
     
     private func getCardImageName(cardDto: CardDTO) -> String {
@@ -64,8 +72,8 @@ class SKCard : SKShapeNode {
     }
     
     func printSelf() {
-        let number = cardDto?.number ?? 0
-        let suit = cardDto?.suit ?? .none
+        let number = cardDto.number
+        let suit = cardDto.suit
         let tappedStatus = tapped ? "true" : "false"
         let coveredStatus = covered ? "true" : "false"
         let hasNext = next != nil ? "true" : "false"
