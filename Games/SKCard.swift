@@ -18,15 +18,15 @@ class SKCard : SKNode {
     private var card: SKShapeNode
     
     // Initialization with an image
-    init(cardDto: CardDTO, size: CGSize, radius: CGFloat, imageName: String) {
-        height = size.height
+    init(cardDto: CardDTO, size: CGSize, radius: CGFloat, covered: Bool) {
+        self.height = size.height
         self.cardDto = cardDto
+        self.card = SKShapeNode(rectOf: size, cornerRadius: radius)
+        super.init()
         
-        card = SKShapeNode(rectOf: size, cornerRadius: radius)
+        let imageName = covered ? "card back side" : getCardImageName(cardDto: cardDto)
         card.fillColor = .white
         card.fillTexture = SKTexture(imageNamed: imageName)
-        
-        super.init()
         addChild(card)
     }
     
@@ -62,6 +62,9 @@ class SKCard : SKNode {
             num = "J"
             break
         case 12:
+            num = "Q"
+            break
+        case 13:
             num = "K"
             break
         default:

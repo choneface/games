@@ -18,7 +18,12 @@ class GameScene: SKScene {
         let h = (self.size.height * 0.7)
         let w = (self.size.width + self.size.height) * 0.047
         var x = (-self.size.width / 2) + (w/2)
-        for _ in 0...6 {
+        let cardSize = CGSize.init(width: w, height: w*1.4)
+        let cardCornerRadius = w * 0.1
+        
+        let deck = SolitareDeck.shuffled()
+        var last = 0
+        for len in 1...7 {
             // Make column
             let col = SKColumn.init(rectOf: CGSize.init(width: w, height: h), cornerRadius: w * 0.3)
             col.position = CGPoint(
@@ -29,17 +34,17 @@ class GameScene: SKScene {
             col.strokeColor = SKColor.blue
             
             // Make card
-            let cardSize = CGSize.init(width: w, height: w*1.4)
-            let cardCornerRadius = w * 0.1
-            
-            let cdata = CardDTO(suit: Suit.hearts, color: SKColor.red, number: 2)
-            let c1data = CardDTO(suit: Suit.spades, color: SKColor.black, number: 2)
-            
-            let c = SKCard.init(cardDto: cdata, size: cardSize, radius: cardCornerRadius, imageName: getCardImageName(cardDto: cdata))
-            let c1 = SKCard.init(cardDto: c1data, size: cardSize, radius: cardCornerRadius, imageName: getCardImageName(cardDto: c1data))
-            
-            col.append(card: c)
-            col.append(card: c1)
+            for k in 1...len {
+                let dto = deck[last]
+                let temp = SKCard.init(
+                    cardDto: dto,
+                    size: cardSize,
+                    radius: cardCornerRadius,
+                    covered: k != len
+                )
+                col.append(card: temp)
+                last += 1
+            }
             self.addChild(col)
             self.columns.append(col)
             x += w*1.1
@@ -103,6 +108,9 @@ class GameScene: SKScene {
             num = "J"
             break
         case 12:
+            num = "Q"
+            break
+        case 13:
             num = "K"
             break
         default:

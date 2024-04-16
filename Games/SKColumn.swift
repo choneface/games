@@ -31,6 +31,12 @@ class SKColumn : SKShapeNode, Sequence {
         card.position = nextPosition
         self.addChild(card)
     }
+    
+    func appendAll(cards: [SKCard]) {
+        for card in cards {
+            append(card: card)
+        }
+    }
 
     // Remove all nodes
     func removeAll() {
@@ -51,7 +57,7 @@ class SKColumn : SKShapeNode, Sequence {
         if(nextPosition.y == 0) {
             nextPosition.y = (self.frame.height / 2) - (card.height / 2)
         } else {
-            nextPosition.y -= (card.height / 5)
+            nextPosition.y -= (card.height / 3.5)
         }
     }
     
