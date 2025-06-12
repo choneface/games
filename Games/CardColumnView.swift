@@ -34,7 +34,8 @@ struct CardColumnView: View {
 
                     CardPlaceholder(faceUp: card.faceUp,
                                     width: width,
-                                    label: card.value)
+                                    label: card.value,
+                                    isRed: card.isRed)
                         .offset(y: CGFloat(index) * visibleStrip)
                         .opacity(isBeingDragged ? 0 : 1)
                         .gesture(
@@ -75,7 +76,8 @@ struct CardColumnView: View {
                     ForEach(Array(draggedCards.enumerated()), id: \.element.id) { idx, card in
                         CardPlaceholder(faceUp: card.faceUp,
                                         width: width,
-                                        label: card.value)
+                                        label: card.value,
+                                        isRed: card.isRed)
                             .offset(y: CGFloat(idx) * visibleStrip)
                     }
                 }

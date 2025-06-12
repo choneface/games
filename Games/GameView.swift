@@ -10,12 +10,10 @@ import SwiftUI
 struct GameView: View {
     // MARK: – Model
     @State private var columns: [[Card]] = MockSolitaire.columns
-
-    // Frames of every column, published via preference key
     @State private var columnFrames: [Int: CGRect] = [:]
 
     // MARK: – Layout constants
-    private let spacing: CGFloat = 8  // gap between piles
+    private let spacing: CGFloat = 8
     private let sidePadding: CGFloat = 8
 
     var body: some View {
@@ -40,9 +38,8 @@ struct GameView: View {
             }
             .padding(.horizontal, sidePadding)
             .padding(.top, 24)
-            .coordinateSpace(name: "GameSpace")      // common coord-space
+            .coordinateSpace(name: "GameSpace")
             .onPreferenceChange(ColumnFrameKey.self) { anchors in
-                // Convert every Anchor<CGRect> into an actual CGRect in the same space
                 columnFrames = anchors.mapValues { geo[$0] }
             }
             .frame(maxHeight: .infinity, alignment: .top)
@@ -51,33 +48,49 @@ struct GameView: View {
         .navigationTitle("Solitaire")
     }
 
+    // -------------------------------------------------------------------------
     // MARK: – Drop handling
+    // -------------------------------------------------------------------------
     private func handleDrop(_ dragged: [Card],
                             from origin: Int,
                             at point: CGPoint) {
 
-        // 1.  Find the column whose horizontal *mid-point* is nearest the finger’s x
+        // Pick the column whose horizontal midpoint is nearest the finger.
         guard let target = columnFrames.min(by: { lhs, rhs in
             abs(point.x - lhs.value.midX) < abs(point.x - rhs.value.midX)
-        })?.key else {
-            print("no columns recorded – should never happen")
-            return
-        }
-        
-        print("target found \(target)")
-        print("point: \(point)")
+        })?.key else { return }
 
         guard target != origin else { return }
 
-        // 3.  Mutate the model
+        // Abort if move is illegal for classic Klondike tableau.
+        guard canDrop(dragged, onto: columns[target]) else { return }
+
+        // --- mutate origin pile ----------------------------------------------
         columns[origin].removeLast(dragged.count)
-        
-        if let lastIndex = columns[origin].indices.last,
-                   columns[origin][lastIndex].faceUp == false {
-                    columns[origin][lastIndex].faceUp = true
-                }
-        
+        // Flip the newly exposed card if needed
+        if let last = columns[origin].indices.last,
+           columns[origin][last].faceUp == false {
+            columns[origin][last].faceUp = true
+        }
+
+        // --- mutate destination pile -----------------------------------------
         columns[target].append(contentsOf: dragged)
+    }
+
+    /// Classic Klondike tableau rules:
+    /// • Empty pile ⇒ only a King may be placed.
+    /// • Otherwise first dragged card must be one-rank lower and opposite color.
+    private func canDrop(_ dragged: [Card], onto targetPile: [Card]) -> Bool {
+        guard let movingTop = dragged.first else { return false }
+
+        if targetPile.isEmpty {
+            return movingTop.rank == 13       // King
+        } else {
+            guard let targetTop = targetPile.last else { return false }
+            let rankOK   = movingTop.rank == targetTop.rank - 1
+            let colorOK  = movingTop.isRed != targetTop.isRed
+            return rankOK && colorOK
+        }
     }
 }
 
