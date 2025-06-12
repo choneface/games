@@ -8,31 +8,65 @@
 import SwiftUI
 
 struct GameView: View {
-    let column1: [Card] = [
-        Card(value: "5♠", faceUp: false),
-        Card(value: "6♣", faceUp: true),
-        Card(value: "7♥", faceUp: true),
-        Card(value: "8♦", faceUp: true)
+    // MARK: – Mock data --------------------------------------------------------
+    //
+    // Column 0 has 1 card (last one face-up), column 1 has 2 cards, … column 6 has 7 cards.
+    // Suit / rank values are arbitrary placeholders so you can see different labels.
+    //
+    let columns: [[Card]] = [
+        [Card(value: "A♠", faceUp: true)],
+
+        [Card(value: "2♠", faceUp: false),
+         Card(value: "3♠", faceUp: true)],
+
+        [Card(value: "4♣", faceUp: false),
+         Card(value: "5♣", faceUp: false),
+         Card(value: "6♣", faceUp: true)],
+
+        [Card(value: "7♦", faceUp: false),
+         Card(value: "8♦", faceUp: false),
+         Card(value: "9♦", faceUp: false),
+         Card(value: "10♦", faceUp: true)],
+
+        [Card(value: "J♥", faceUp: false),
+         Card(value: "Q♥", faceUp: false),
+         Card(value: "K♥", faceUp: false),
+         Card(value: "A♥", faceUp: false),
+         Card(value: "2♥", faceUp: true)],
+
+        [Card(value: "3♠", faceUp: false),
+         Card(value: "4♠", faceUp: false),
+         Card(value: "5♠", faceUp: false),
+         Card(value: "6♠", faceUp: false),
+         Card(value: "7♠", faceUp: false),
+         Card(value: "8♠", faceUp: true)],
+
+        [Card(value: "9♣",  faceUp: false),
+         Card(value: "10♣", faceUp: false),
+         Card(value: "J♣",  faceUp: false),
+         Card(value: "Q♣",  faceUp: false),
+         Card(value: "K♣",  faceUp: false),
+         Card(value: "A♣",  faceUp: false),
+         Card(value: "2♣",  faceUp: true)]
     ]
 
-    let column2: [Card] = [
-        Card(value: "5♠", faceUp: false),
-        Card(value: "J♠", faceUp: false),
-        Card(value: "Q♣", faceUp: true)
-    ]
-
+    // MARK: – Body -------------------------------------------------------------
     var body: some View {
         GeometryReader { geometry in
-            let spacing: CGFloat = 24
-            let availableWidth = geometry.size.width - spacing - 32
-            let cardWidth = availableWidth / 2
+            let spacing: CGFloat = 4                      // gap between columns
+            let availableWidth = geometry.size.width
+                               - (spacing * CGFloat(columns.count - 1))
+                               - 8                        // horizontal padding
+            let cardWidth = availableWidth / CGFloat(columns.count)
 
-            HStack(spacing: spacing) {
-                CardColumnView(cards: column1, width: cardWidth)
-                CardColumnView(cards: column2, width: cardWidth)
+            HStack(alignment: .top, spacing: spacing) {
+                ForEach(Array(columns.enumerated()), id: \.offset) { _, pile in
+                    CardColumnView(cards: pile, width: cardWidth)
+                }
             }
+            .padding(.horizontal, 4)
+            .padding(.top, 24)
             .frame(maxHeight: .infinity, alignment: .top)
-            .padding()
         }
         .background(Color.green.ignoresSafeArea())
         .navigationTitle("Solitaire")
@@ -40,5 +74,6 @@ struct GameView: View {
 }
 
 #Preview {
-    GameView()
+    NavigationStack { GameView() }
 }
+
