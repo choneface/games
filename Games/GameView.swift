@@ -46,7 +46,7 @@ struct GameView: View {
                     )
                     .padding(.trailing, sidePadding)
                 }
-                .zIndex(10) 
+                .zIndex(10)
 
                 // ---------- Existing tableau ----------
                 tableauRow(cardWidth: calcCardWidth(in: geo), geo: geo)
@@ -247,19 +247,31 @@ struct GameView: View {
         waste.append(contentsOf: faceUpCards)
     }
     
-    /// Called when a waste card is dropped somewhere in the GameSpace.
-    /// For now we skip legality checks and always append to the nearest column.
+    /// Drop handler for the right-most waste card.
+    /// • If the finger isn’t vertically near *any* column, we cancel.
+    /// • Otherwise we pick the nearest column by mid-X.
+    /// • If that column fails the Klondike rule, we cancel.
+    /// • Only when both checks pass do we mutate `waste` and `columns`.
     private func handleWasteDrag(card: Card, dropPoint: CGPoint) {
-        // 1. Find nearest column by midX
-        guard let target = columnFrames.min(by: { abs(dropPoint.x - $0.value.midX) <
-                                                 abs(dropPoint.x - $1.value.midX) })?.key
-        else { return }
+        let yTolerance: CGFloat = 40         // pts above / below column band
 
-        // 2. Remove card from waste (it's always the last)
-        guard !waste.isEmpty, waste.last?.id == card.id else { return }
+        // 1. Ensure the finger is roughly in the vertical strip of *some* column.
+        guard columnFrames.values.contains(where: { frame in
+            (frame.minY - yTolerance)...(frame.maxY + yTolerance)
+                ~= dropPoint.y
+        }) else { return }                   // cancel: drop far above/below tableau
+
+        // 2. Find the single nearest column by mid-X (regardless of legality).
+        guard let target = columnFrames.min(by: { lhs, rhs in
+            abs(dropPoint.x - lhs.value.midX) < abs(dropPoint.x - rhs.value.midX)
+        })?.key else { return }
+
+        // 3. Check Klondike legality for *that* pile.
+        guard canDrop([card], onto: columns[target]) else { return }  // cancel
+
+        // 4. Move card: remove from waste, append to tableau.
+        guard waste.last?.id == card.id else { return }  // safety: must be top card
         waste.removeLast()
-
-        // 3. Append to tableau column (no rule check yet)
         columns[target].append(card)
     }
 
