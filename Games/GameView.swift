@@ -71,6 +71,12 @@ struct GameView: View {
 
         // 3.  Mutate the model
         columns[origin].removeLast(dragged.count)
+        
+        if let lastIndex = columns[origin].indices.last,
+                   columns[origin][lastIndex].faceUp == false {
+                    columns[origin][lastIndex].faceUp = true
+                }
+        
         columns[target].append(contentsOf: dragged)
     }
 }
