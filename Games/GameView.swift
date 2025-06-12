@@ -7,9 +7,14 @@
 
 import SwiftUI
 
+// -----------------------------------------------------------------------------
+// MARK: – GameView
+// -----------------------------------------------------------------------------
 struct GameView: View {
     // MARK: – Model
     @State private var columns: [[Card]] = MockSolitaire.columns
+    @State private var foundations: [FoundationPile] =
+        Suit.allCases.map { FoundationPile(suit: $0) }          // ← NEW
     @State private var columnFrames: [Int: CGRect] = [:]
 
     // MARK: – Layout constants
@@ -18,79 +23,97 @@ struct GameView: View {
 
     var body: some View {
         GeometryReader { geo in
-            let availableWidth = geo.size.width
-                               - spacing * CGFloat(columns.count - 1)
-                               - sidePadding * 2
-            let cardWidth = availableWidth / CGFloat(columns.count)
+            VStack(spacing: 16) {                                  // ← NEW
+                // ---------- Foundation row ----------
+                foundationRow(cardWidth: calcCardWidth(in: geo))
 
-            HStack(alignment: .top, spacing: spacing) {
-                ForEach(columns.indices, id: \.self) { index in
-                    CardColumnView(
-                        cards: columns[index],
-                        width: cardWidth,
-                        columnIndex: index
-                    ) { dragged, fromColumn, dropPoint in
-                        handleDrop(dragged,
-                                   from: fromColumn,
-                                   at: dropPoint)
-                    }
-                }
+                // ---------- Existing tableau ----------
+                tableauRow(cardWidth: calcCardWidth(in: geo), geo: geo)
             }
-            .padding(.horizontal, sidePadding)
-            .padding(.top, 24)
-            .coordinateSpace(name: "GameSpace")
-            .onPreferenceChange(ColumnFrameKey.self) { anchors in
-                columnFrames = anchors.mapValues { geo[$0] }
-            }
-            .frame(maxHeight: .infinity, alignment: .top)
+            .padding(.top, 16)
+            .background(Color.green.ignoresSafeArea())
         }
-        .background(Color.green.ignoresSafeArea())
         .navigationTitle("Solitaire")
     }
 
     // -------------------------------------------------------------------------
-    // MARK: – Drop handling
+    // MARK: – Foundation row
+    // -------------------------------------------------------------------------
+    @ViewBuilder
+    private func foundationRow(cardWidth: CGFloat) -> some View {
+        HStack(spacing: spacing) {
+            ForEach(foundations.indices, id: \.self) { idx in
+                FoundationView(pile: foundations[idx], width: cardWidth)
+            }
+        }
+        .padding(.horizontal, sidePadding)
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    // -------------------------------------------------------------------------
+    // MARK: – Tableau row (was your original body content)
+    // -------------------------------------------------------------------------
+    @ViewBuilder
+    private func tableauRow(cardWidth: CGFloat, geo: GeometryProxy) -> some View {
+        HStack(alignment: .top, spacing: spacing) {
+            ForEach(columns.indices, id: \.self) { index in
+                CardColumnView(
+                    cards: columns[index],
+                    width: cardWidth,
+                    columnIndex: index
+                ) { dragged, fromColumn, dropPoint in
+                    handleDrop(dragged,
+                               from: fromColumn,
+                               at: dropPoint)
+                }
+            }
+        }
+        .padding(.horizontal, sidePadding)
+        .padding(.top, 8)
+        .coordinateSpace(name: "GameSpace")
+        .onPreferenceChange(ColumnFrameKey.self) { anchors in
+            columnFrames = anchors.mapValues { geo[$0] }
+        }
+        .frame(maxHeight: .infinity, alignment: .top)
+    }
+
+    // -------------------------------------------------------------------------
+    // MARK: – Helpers
+    // -------------------------------------------------------------------------
+    private func calcCardWidth(in geo: GeometryProxy) -> CGFloat {
+        let available = geo.size.width
+                      - spacing * CGFloat(columns.count - 1)
+                      - sidePadding * 2
+        return available / CGFloat(columns.count)
+    }
+
+    // -------------------------------------------------------------------------
+    // MARK: – Drop handling (unchanged)
     // -------------------------------------------------------------------------
     private func handleDrop(_ dragged: [Card],
                             from origin: Int,
                             at point: CGPoint) {
-
-        // Pick the column whose horizontal midpoint is nearest the finger.
         guard let target = columnFrames.min(by: { lhs, rhs in
             abs(point.x - lhs.value.midX) < abs(point.x - rhs.value.midX)
         })?.key else { return }
 
         guard target != origin else { return }
-
-        // Abort if move is illegal for classic Klondike tableau.
         guard canDrop(dragged, onto: columns[target]) else { return }
 
-        // --- mutate origin pile ----------------------------------------------
         columns[origin].removeLast(dragged.count)
-        // Flip the newly exposed card if needed
         if let last = columns[origin].indices.last,
-           columns[origin][last].faceUp == false {
+           !columns[origin][last].faceUp {
             columns[origin][last].faceUp = true
         }
-
-        // --- mutate destination pile -----------------------------------------
         columns[target].append(contentsOf: dragged)
     }
 
-    /// Classic Klondike tableau rules:
-    /// • Empty pile ⇒ only a King may be placed.
-    /// • Otherwise first dragged card must be one-rank lower and opposite color.
     private func canDrop(_ dragged: [Card], onto targetPile: [Card]) -> Bool {
         guard let movingTop = dragged.first else { return false }
-
-        if targetPile.isEmpty {
-            return movingTop.rank == 13       // King
-        } else {
-            guard let targetTop = targetPile.last else { return false }
-            let rankOK   = movingTop.rank == targetTop.rank - 1
-            let colorOK  = movingTop.isRed != targetTop.isRed
-            return rankOK && colorOK
-        }
+        if targetPile.isEmpty { return movingTop.rank == 13 }      // King
+        guard let targetTop = targetPile.last else { return false }
+        return movingTop.rank == targetTop.rank - 1
+            && movingTop.isRed != targetTop.isRed
     }
 }
 
