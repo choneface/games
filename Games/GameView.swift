@@ -46,6 +46,7 @@ struct GameView: View {
                     )
                     .padding(.trailing, sidePadding)
                 }
+                .zIndex(10) 
 
                 // ---------- Existing tableau ----------
                 tableauRow(cardWidth: calcCardWidth(in: geo), geo: geo)

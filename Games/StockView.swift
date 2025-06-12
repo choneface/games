@@ -40,6 +40,7 @@ struct StockView: View {
                 // ───── Stock pile (tap target) ────────────────────────────
                 stockShape
                     .frame(width: width, height: height)
+                    .zIndex(draggedCard == nil ? 0 : 2)
                     .contentShape(Rectangle())
                     .onTapGesture(perform: dealAction)
 
@@ -101,7 +102,7 @@ struct StockView: View {
                     )
                     .offset(x: baseOffsetX + dragOffset.width,
                             y: dragOffset.height)
-                    .zIndex(1)
+                    .zIndex(3)
                 }
             }
         }
@@ -123,6 +124,7 @@ struct StockView: View {
 
     /// Horizontal shift from the right edge for a waste card at original index.
     private func leftShift(forOriginalIndex idx: Int) -> CGFloat {
-        width + gap + CGFloat(idx) * width * overlap
+        let count = visibleWaste.count                   // 1‥3
+        return width + gap + CGFloat(count - 1 - idx) * width * overlap
     }
 }
