@@ -36,3 +36,10 @@ struct Card: Identifiable, Equatable {
         value.contains("♥") || value.contains("♦")
     }
 }
+
+extension Card {
+    var suit: Suit? {
+        guard let sym = value.last else { return nil }
+        return Suit(rawValue: String(sym))
+    }
+}

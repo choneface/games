@@ -15,6 +15,7 @@ struct CardColumnView: View {
     var width: CGFloat
     var columnIndex: Int
     var onDrop: (_ dragged: [Card], _ fromColumn: Int, _ dropPoint: CGPoint) -> Void
+    var onDoubleTap: (_ card: Card, _ fromColumn: Int) -> Void
 
     // MARK: – Drag state
     @State private var draggedCards: [Card] = []
@@ -67,6 +68,14 @@ struct CardColumnView: View {
                                     dragStartYOffset = 0
                                 }
                             : nil
+                        )
+                        .highPriorityGesture(
+                            TapGesture(count: 2)
+                                .onEnded {
+                                    if card.faceUp && index == cards.count - 1 {
+                                        onDoubleTap(card, columnIndex)
+                                    }
+                                }
                         )
                 }
             }

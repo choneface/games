@@ -16,6 +16,10 @@ struct GameView: View {
     @State private var foundations: [FoundationPile] =
         Suit.allCases.map { FoundationPile(suit: $0) }          // ← NEW
     @State private var columnFrames: [Int: CGRect] = [:]
+    private var foundationIndex: [Suit:Int] {
+        Dictionary(uniqueKeysWithValues:
+            foundations.enumerated().map { ($1.suit, $0) })
+    }
 
     // MARK: – Layout constants
     private let spacing: CGFloat = 8
@@ -65,6 +69,8 @@ struct GameView: View {
                     handleDrop(dragged,
                                from: fromColumn,
                                at: dropPoint)
+                } onDoubleTap: { card, fromColumn in
+                    handleDoubleTap(card: card, from: fromColumn)
                 }
             }
         }
@@ -114,6 +120,23 @@ struct GameView: View {
         guard let targetTop = targetPile.last else { return false }
         return movingTop.rank == targetTop.rank - 1
             && movingTop.isRed != targetTop.isRed
+    }
+    
+    private func handleDoubleTap(card: Card, from column: Int) {
+        guard let suit = card.suit,
+              let fIdx = foundationIndex[suit] else { return }
+
+        // Remove the TOP card only
+        guard let top = columns[column].last, top.id == card.id else { return }
+        columns[column].removeLast()
+
+        // Flip newly exposed card
+        if let last = columns[column].indices.last, !columns[column][last].faceUp {
+            columns[column][last].faceUp = true
+        }
+
+        // Append to its foundation (no validity checks yet)
+        foundations[fIdx].cards.append(card)
     }
 }
 
