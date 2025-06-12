@@ -8,23 +8,39 @@
 import SwiftUI
 
 struct CardPlaceholder: View {
-    var faceUp: Bool
-    var width: CGFloat
+    let faceUp: Bool
+    let width: CGFloat
+    let label: String?
 
     var body: some View {
-        let height = width * 1.5 // 2:3 aspect ratio
+        let height = width * 1.5
 
         RoundedRectangle(cornerRadius: 6)
             .fill(faceUp ? Color.white : Color.gray)
             .frame(width: width, height: height)
             .overlay(
+                Group {
+                    if faceUp, let label = label {
+                        Text(label)
+                            .font(.caption)
+                            .foregroundColor(.black)
+                    }
+                }
+            )
+            .overlay(
                 RoundedRectangle(cornerRadius: 6)
                     .stroke(Color.black, lineWidth: 1)
             )
-            .shadow(radius: 1)
+            .shadow(radius: 2)
     }
 }
 
 #Preview {
-    CardPlaceholder(faceUp: true, width: 60)
+    VStack(spacing: 10) {
+        CardPlaceholder(faceUp: true, width: 60, label: "7♥")
+        CardPlaceholder(faceUp: false, width: 60, label: "2♣")
+    }
+    .padding()
+    .background(Color.green)
 }
+

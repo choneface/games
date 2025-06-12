@@ -8,34 +8,34 @@
 import SwiftUI
 
 struct GameView: View {
+    let column1: [Card] = [
+        Card(value: "5♠", faceUp: false),
+        Card(value: "6♣", faceUp: true),
+        Card(value: "7♥", faceUp: true),
+        Card(value: "8♦", faceUp: true)
+    ]
+
+    let column2: [Card] = [
+        Card(value: "5♠", faceUp: false),
+        Card(value: "J♠", faceUp: false),
+        Card(value: "Q♣", faceUp: true)
+    ]
+
     var body: some View {
         GeometryReader { geometry in
-            let totalSpacing: CGFloat = 12 * 6
-            let availableWidth = geometry.size.width - totalSpacing - 32
-            let cardWidth = availableWidth / 7
-            let cardHeight = cardWidth * 1.5
-            let overlapOffset: CGFloat = 20
+            let spacing: CGFloat = 24
+            let availableWidth = geometry.size.width - spacing - 32
+            let cardWidth = availableWidth / 2
 
-            ScrollView {
-                HStack(alignment: .top, spacing: 12) {
-                    ForEach(0..<7) { columnIndex in
-                        ZStack(alignment: .topLeading) {
-                            ForEach(0..<columnIndex + 1, id: \.self) { rowIndex in
-                                CardPlaceholder(
-                                    faceUp: rowIndex == columnIndex,
-                                    width: cardWidth
-                                )
-                                .position(x: cardWidth / 2, y: CGFloat(rowIndex) * overlapOffset + (cardHeight / 2))
-                            }
-                        }
-                        .frame(width: cardWidth, height: CGFloat(7) * overlapOffset + cardHeight)
-                    }
-                }
-                .padding()
+            HStack(spacing: spacing) {
+                CardColumnView(cards: column1, width: cardWidth)
+                CardColumnView(cards: column2, width: cardWidth)
             }
+            .frame(maxHeight: .infinity, alignment: .top)
+            .padding()
         }
+        .background(Color.green.ignoresSafeArea())
         .navigationTitle("Solitaire")
-        .background(Color.green.opacity(0.6).ignoresSafeArea())
     }
 }
 
