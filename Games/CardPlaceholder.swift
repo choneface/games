@@ -17,7 +17,7 @@ struct CardPlaceholder: View {
         let height = width * 1.5
         let cornerInset: CGFloat = 4      // distance from the edges
 
-        ZStack(alignment: .topTrailing) {
+        ZStack(alignment: .topLeading) {
             // Card face / back
             RoundedRectangle(cornerRadius: 6)
                 .fill(faceUp ? Color.white : Color.gray)
@@ -28,7 +28,7 @@ struct CardPlaceholder: View {
                     .font(.caption2.bold())
                     .foregroundColor(isRed ? .red : .black)
                     .padding(.top, cornerInset)
-                    .padding(.trailing, cornerInset)
+                    .padding(.leading, cornerInset)
             }
 
             // Border
