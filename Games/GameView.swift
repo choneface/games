@@ -15,6 +15,7 @@ struct GameView: View {
     // MARK: – Model
     @State private var columns: [[Card]]
     @State private var stock: [Card]
+    @State private var waste:   [Card] = []
     @State private var foundations: [FoundationPile] =
         Suit.allCases.map { FoundationPile(suit: $0) }          // ← NEW
     @State private var columnFrames: [Int: CGRect] = [:]
@@ -26,12 +27,24 @@ struct GameView: View {
     // MARK: – Layout constants
     private let spacing: CGFloat = 8
     private let sidePadding: CGFloat = 8
+    private let dealCount: Int = 3
 
     var body: some View {
         GeometryReader { geo in
             VStack(spacing: 16) {                                  // ← NEW
-                // ---------- Foundation row ----------
-                foundationRow(cardWidth: calcCardWidth(in: geo))
+                HStack {
+                    // Foundations left-aligned
+                    foundationRow(cardWidth: calcCardWidth(in: geo))
+                    Spacer()
+                    // Stock & waste right-aligned
+                    StockView(
+                        width: calcCardWidth(in: geo),
+                        stockCount: stock.count,
+                        waste: waste,
+                        dealAction: dealFromStock
+                    )
+                    .padding(.trailing, sidePadding)
+                }
 
                 // ---------- Existing tableau ----------
                 tableauRow(cardWidth: calcCardWidth(in: geo), geo: geo)
@@ -198,6 +211,35 @@ struct GameView: View {
         let deal = Self.dealKlondike()
         _columns = State(initialValue: deal.columns)
         _stock   = State(initialValue: deal.stock)
+    }
+    
+    /// Handles a tap on the stock pile:
+    /// • Deals `dealCount` cards from `stock` to `waste`, face-up.
+    /// • If the stock is empty, recycles the entire waste pile back into the stock.
+    private func dealFromStock() {
+        if stock.isEmpty {
+            // Recycle waste back into a fresh, face-down stock
+            stock = waste.map { card in
+                var fresh = card
+                fresh.faceUp = false
+                return fresh
+            }
+            waste.removeAll()
+            return
+        }
+
+        // Draw either 1 or 3 cards, depending on rule
+        let count = min(dealCount, stock.count)
+        let dealtSlice = stock.suffix(count)
+        stock.removeLast(count)
+
+        // Turn them face-up and add to waste
+        let faceUpCards = dealtSlice.map { card -> Card in
+            var c = card
+            c.faceUp = true
+            return c
+        }
+        waste.append(contentsOf: faceUpCards)
     }
 
 }
