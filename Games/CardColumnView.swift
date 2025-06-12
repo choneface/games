@@ -51,7 +51,7 @@ struct CardColumnView: View {
                                 }
                                 .onEnded { value in
                                     // 1️⃣ Column’s frame in the shared coordinate space
-                                    let columnFrame = proxy.frame(in: .named("GameSpace"))
+                                    let columnFrame = proxy.frame(in: .named("Board"))
 
                                     // 2️⃣ Finger point translated into that same space
                                     let dropPoint = CGPoint(

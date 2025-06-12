@@ -41,7 +41,8 @@ struct GameView: View {
                         width: calcCardWidth(in: geo),
                         stockCount: stock.count,
                         waste: waste,
-                        dealAction: dealFromStock
+                        dealAction: dealFromStock,
+                        dragEnded: handleWasteDrag
                     )
                     .padding(.trailing, sidePadding)
                 }
@@ -51,6 +52,7 @@ struct GameView: View {
             }
             .padding(.top, 16)
             .background(Color.green.ignoresSafeArea())
+            .coordinateSpace(name: "Board")
         }
         .navigationTitle("Solitaire")
     }
@@ -91,9 +93,11 @@ struct GameView: View {
         }
         .padding(.horizontal, sidePadding)
         .padding(.top, 8)
-        .coordinateSpace(name: "GameSpace")
+        .coordinateSpace(name: "Board")
         .onPreferenceChange(ColumnFrameKey.self) { anchors in
-            columnFrames = anchors.mapValues { geo[$0] }
+            columnFrames = anchors.mapValues { anch in
+                geo[anch]                                    // still single-argument
+            }
         }
         .frame(maxHeight: .infinity, alignment: .top)
     }
@@ -240,6 +244,22 @@ struct GameView: View {
             return c
         }
         waste.append(contentsOf: faceUpCards)
+    }
+    
+    /// Called when a waste card is dropped somewhere in the GameSpace.
+    /// For now we skip legality checks and always append to the nearest column.
+    private func handleWasteDrag(card: Card, dropPoint: CGPoint) {
+        // 1. Find nearest column by midX
+        guard let target = columnFrames.min(by: { abs(dropPoint.x - $0.value.midX) <
+                                                 abs(dropPoint.x - $1.value.midX) })?.key
+        else { return }
+
+        // 2. Remove card from waste (it's always the last)
+        guard !waste.isEmpty, waste.last?.id == card.id else { return }
+        waste.removeLast()
+
+        // 3. Append to tableau column (no rule check yet)
+        columns[target].append(card)
     }
 
 }
