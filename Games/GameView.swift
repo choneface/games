@@ -8,72 +8,73 @@
 import SwiftUI
 
 struct GameView: View {
-    // MARK: – Mock data --------------------------------------------------------
-    //
-    // Column 0 has 1 card (last one face-up), column 1 has 2 cards, … column 6 has 7 cards.
-    // Suit / rank values are arbitrary placeholders so you can see different labels.
-    //
-    let columns: [[Card]] = [
-        [Card(value: "A♠", faceUp: true)],
+    // MARK: – Model
+    @State private var columns: [[Card]] = MockSolitaire.columns
 
-        [Card(value: "2♠", faceUp: false),
-         Card(value: "3♠", faceUp: true)],
+    // Frames of every column, published via preference key
+    @State private var columnFrames: [Int: CGRect] = [:]
 
-        [Card(value: "4♣", faceUp: false),
-         Card(value: "5♣", faceUp: false),
-         Card(value: "6♣", faceUp: true)],
+    // MARK: – Layout constants
+    private let spacing: CGFloat = 8  // gap between piles
+    private let sidePadding: CGFloat = 8
 
-        [Card(value: "7♦", faceUp: false),
-         Card(value: "8♦", faceUp: false),
-         Card(value: "9♦", faceUp: false),
-         Card(value: "10♦", faceUp: true)],
-
-        [Card(value: "J♥", faceUp: false),
-         Card(value: "Q♥", faceUp: false),
-         Card(value: "K♥", faceUp: false),
-         Card(value: "A♥", faceUp: false),
-         Card(value: "2♥", faceUp: true)],
-
-        [Card(value: "3♠", faceUp: false),
-         Card(value: "4♠", faceUp: false),
-         Card(value: "5♠", faceUp: false),
-         Card(value: "6♠", faceUp: false),
-         Card(value: "7♠", faceUp: false),
-         Card(value: "8♠", faceUp: true)],
-
-        [Card(value: "9♣",  faceUp: false),
-         Card(value: "10♣", faceUp: false),
-         Card(value: "J♣",  faceUp: false),
-         Card(value: "Q♣",  faceUp: false),
-         Card(value: "K♣",  faceUp: false),
-         Card(value: "A♣",  faceUp: false),
-         Card(value: "2♣",  faceUp: true)]
-    ]
-
-    // MARK: – Body -------------------------------------------------------------
     var body: some View {
-        GeometryReader { geometry in
-            let spacing: CGFloat = 4                      // gap between columns
-            let availableWidth = geometry.size.width
-                               - (spacing * CGFloat(columns.count - 1))
-                               - 8                        // horizontal padding
+        GeometryReader { geo in
+            let availableWidth = geo.size.width
+                               - spacing * CGFloat(columns.count - 1)
+                               - sidePadding * 2
             let cardWidth = availableWidth / CGFloat(columns.count)
 
             HStack(alignment: .top, spacing: spacing) {
-                ForEach(Array(columns.enumerated()), id: \.offset) { _, pile in
-                    CardColumnView(cards: pile, width: cardWidth)
+                ForEach(columns.indices, id: \.self) { index in
+                    CardColumnView(
+                        cards: columns[index],
+                        width: cardWidth,
+                        columnIndex: index
+                    ) { dragged, fromColumn, dropPoint in
+                        handleDrop(dragged,
+                                   from: fromColumn,
+                                   at: dropPoint)
+                    }
                 }
             }
-            .padding(.horizontal, 4)
+            .padding(.horizontal, sidePadding)
             .padding(.top, 24)
+            .coordinateSpace(name: "GameSpace")      // common coord-space
+            .onPreferenceChange(ColumnFrameKey.self) { anchors in
+                // Convert every Anchor<CGRect> into an actual CGRect in the same space
+                columnFrames = anchors.mapValues { geo[$0] }
+            }
             .frame(maxHeight: .infinity, alignment: .top)
         }
         .background(Color.green.ignoresSafeArea())
         .navigationTitle("Solitaire")
+    }
+
+    // MARK: – Drop handling
+    private func handleDrop(_ dragged: [Card],
+                            from origin: Int,
+                            at point: CGPoint) {
+
+        // 1.  Find the column whose horizontal *mid-point* is nearest the finger’s x
+        guard let target = columnFrames.min(by: { lhs, rhs in
+            abs(point.x - lhs.value.midX) < abs(point.x - rhs.value.midX)
+        })?.key else {
+            print("no columns recorded – should never happen")
+            return
+        }
+        
+        print("target found \(target)")
+        print("point: \(point)")
+
+        guard target != origin else { return }
+
+        // 3.  Mutate the model
+        columns[origin].removeLast(dragged.count)
+        columns[target].append(contentsOf: dragged)
     }
 }
 
 #Preview {
     NavigationStack { GameView() }
 }
-
