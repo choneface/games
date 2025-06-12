@@ -11,8 +11,10 @@ import SwiftUI
 // MARK: – GameView
 // -----------------------------------------------------------------------------
 struct GameView: View {
+    
     // MARK: – Model
-    @State private var columns: [[Card]] = MockSolitaire.columns
+    @State private var columns: [[Card]]
+    @State private var stock: [Card]
     @State private var foundations: [FoundationPile] =
         Suit.allCases.map { FoundationPile(suit: $0) }          // ← NEW
     @State private var columnFrames: [Int: CGRect] = [:]
@@ -150,6 +152,54 @@ struct GameView: View {
         guard let top = pile.topCard else { return false }
         return card.rank == top.rank + 1 // must ascend by exactly one
     }
+    
+    // MARK: - Dealing helpers -----------------------------------------------------
+
+    private struct Deal {
+        let columns: [[Card]]
+        let stock:   [Card]
+    }
+
+    private static func dealKlondike() -> Deal {
+        var deck: [Card] = buildDeck()
+        deck.shuffle()
+
+        var cursor:  Int          = 0
+        var columns: [[Card]] = Array(repeating: [], count: 7)
+
+        for col in 0..<7 {
+            for row in 0...col {
+                var card: Card = deck[cursor]
+                card.faceUp    = (row == col)
+                columns[col].append(card)
+                cursor += 1
+            }
+        }
+
+        let stock: [Card] = Array(deck[cursor...])
+        return Deal(columns: columns, stock: stock)
+    }
+
+    private static func buildDeck() -> [Card] {
+        let suits: [Suit]  = [.spades, .clubs, .hearts, .diamonds]
+        let ranks: [String] = ["A","2","3","4","5","6","7","8","9","10","J","Q","K"]
+
+        var deck: [Card] = []
+        for suit in suits {
+            for rank in ranks {
+                let face: String = rank + suit.rawValue
+                deck.append(Card(value: face, faceUp: false))
+            }
+        }
+        return deck
+    }
+    
+    init() {
+        let deal = Self.dealKlondike()
+        _columns = State(initialValue: deal.columns)
+        _stock   = State(initialValue: deal.stock)
+    }
+
 }
 
 #Preview {
