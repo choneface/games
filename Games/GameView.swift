@@ -126,17 +126,29 @@ struct GameView: View {
         guard let suit = card.suit,
               let fIdx = foundationIndex[suit] else { return }
 
-        // Remove the TOP card only
-        guard let top = columns[column].last, top.id == card.id else { return }
+        let pile = foundations[fIdx]
+        guard canPlaceOnFoundation(card: card, pile: pile) else { return } // NEW ✔︎
+
+        // Remove the TOP card only (we already know it's valid & on top)
         columns[column].removeLast()
 
-        // Flip newly exposed card
-        if let last = columns[column].indices.last, !columns[column][last].faceUp {
+        // Flip newly exposed card if needed
+        if let last = columns[column].indices.last,
+           !columns[column][last].faceUp {
             columns[column][last].faceUp = true
         }
 
-        // Append to its foundation (no validity checks yet)
+        // Append to foundation
         foundations[fIdx].cards.append(card)
+    }
+    
+    /// Classic Klondike foundation rule.
+    private func canPlaceOnFoundation(card: Card, pile: FoundationPile) -> Bool {
+        if pile.cards.isEmpty {
+            return card.rank == 1        // Ace starts a foundation
+        }
+        guard let top = pile.topCard else { return false }
+        return card.rank == top.rank + 1 // must ascend by exactly one
     }
 }
 
