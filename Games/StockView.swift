@@ -18,6 +18,7 @@ struct StockView: View {
     let waste: [Card]
     let dealAction: () -> Void
     let dragEnded: (_ card: Card, _ dropPoint: CGPoint) -> Void
+    let onDoubleTap: (_ card: Card) -> Void
 
     // MARK: – Internal drag state
     @State private var draggedCard: Card? = nil
@@ -67,6 +68,10 @@ struct StockView: View {
                     )
                     .offset(x: -leftShift(forOriginalIndex: visibleWaste.count - 1))
                     .opacity(draggedCard?.id == card.id ? 0 : 1)
+                    .highPriorityGesture(
+                            TapGesture(count: 2)
+                                .onEnded { onDoubleTap(card) }
+                        )
                     .gesture(
                         DragGesture()
                             .onChanged { value in

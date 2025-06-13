@@ -42,7 +42,8 @@ struct GameView: View {
                         stockCount: stock.count,
                         waste: waste,
                         dealAction: dealFromStock,
-                        dragEnded: handleWasteDrag
+                        dragEnded: handleWasteDrag,
+                        onDoubleTap: handleWasteDoubleTap
                     )
                     .padding(.trailing, sidePadding)
                 }
@@ -218,13 +219,23 @@ struct GameView: View {
         _stock   = State(initialValue: deal.stock)
     }
     
-    /// Handles a tap on the stock pile:
-    /// • Deals `dealCount` cards from `stock` to `waste`, face-up.
-    /// • If the stock is empty, recycles the entire waste pile back into the stock.
     private func dealFromStock() {
         if stock.isEmpty {
-            // Recycle waste back into a fresh, face-down stock
-            stock = waste.map { card in
+            // ── Re-stock: reverse GROUPS, not individual cards ──────────────
+            var newStock: [Card] = []
+
+            // Chunk waste into groups of `dealCount` cards from bottom to top.
+            let chunkSize = dealCount
+            let chunkStarts = stride(from: 0, to: waste.count, by: chunkSize)
+
+            for start in chunkStarts.reversed() {                // reverse the chunks
+                let end   = min(start + chunkSize, waste.count)
+                let slice = waste[start..<end]                   // preserve order inside slice
+                newStock.append(contentsOf: slice)
+            }
+
+            // Turn them face-down and assign to stock
+            stock = newStock.map { card in
                 var fresh = card
                 fresh.faceUp = false
                 return fresh
@@ -233,18 +244,16 @@ struct GameView: View {
             return
         }
 
-        // Draw either 1 or 3 cards, depending on rule
-        let count = min(dealCount, stock.count)
-        let dealtSlice = stock.suffix(count)
+        // ── Normal deal (unchanged) ─────────────────────────────────────────
+        let count  = min(dealCount, stock.count)
+        let dealt  = stock.suffix(count)
         stock.removeLast(count)
 
-        // Turn them face-up and add to waste
-        let faceUpCards = dealtSlice.map { card -> Card in
-            var c = card
-            c.faceUp = true
-            return c
-        }
-        waste.append(contentsOf: faceUpCards)
+        waste.append(contentsOf: dealt.map { card in
+            var up = card
+            up.faceUp = true
+            return up
+        })
     }
     
     /// Drop handler for the right-most waste card.
@@ -273,6 +282,22 @@ struct GameView: View {
         guard waste.last?.id == card.id else { return }  // safety: must be top card
         waste.removeLast()
         columns[target].append(card)
+    }
+    
+    /// Right-most waste card was double-tapped.
+    /// If the move is legal for its suit foundation, push it; else do nothing.
+    private func handleWasteDoubleTap(card: Card) {
+        guard waste.last?.id == card.id else { return }                 // must be top waste
+        guard let suit = card.suit,
+              let idx  = foundationIndex[suit] else { return }
+
+        var pile = foundations[idx]
+        guard canPlaceOnFoundation(card: card, pile: pile) else { return }
+
+        // mutate models
+        waste.removeLast()
+        pile.cards.append(card)
+        foundations[idx] = pile
     }
 
 }
