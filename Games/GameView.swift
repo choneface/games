@@ -262,7 +262,7 @@ struct GameView: View {
     /// • If that column fails the Klondike rule, we cancel.
     /// • Only when both checks pass do we mutate `waste` and `columns`.
     private func handleWasteDrag(card: Card, dropPoint: CGPoint) {
-        let yTolerance: CGFloat = 40         // pts above / below column band
+        let yTolerance: CGFloat = 0         // pts above / below column band
 
         // 1. Ensure the finger is roughly in the vertical strip of *some* column.
         guard columnFrames.values.contains(where: { frame in
