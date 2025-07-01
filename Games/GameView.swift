@@ -49,6 +49,9 @@ struct GameView: View {
                 .coordinateSpace(name: "Board")
                 .onReceive(gameTimer) { _ in
                     seconds += 1
+                    if seconds % 10  == 0 {
+                        mutateScore(.timePenalty10s)
+                    }
                 }
             }
 
