@@ -27,6 +27,8 @@ struct GameView: View {
     @State private var moves: Int  = 0
     @State private var seconds: Int = 0          // elapsed seconds
     @State private var deckPasses = 0
+    
+    @State private var showWin = false
 
 
     // MARK: – Layout constants
@@ -48,9 +50,11 @@ struct GameView: View {
                 .background(Color.green.ignoresSafeArea())
                 .coordinateSpace(name: "Board")
                 .onReceive(gameTimer) { _ in
-                    seconds += 1
-                    if seconds % 10  == 0 {
-                        mutateScore(.timePenalty10s)
+                    if !showWin {
+                        seconds += 1
+                        if seconds % 10  == 0 {
+                            mutateScore(.timePenalty10s)
+                        }
                     }
                 }
             }
@@ -68,6 +72,20 @@ struct GameView: View {
             .padding(.bottom, 20)
         }
         .navigationTitle("Solitaire")
+        .fullScreenCover(isPresented: $showWin) {
+            WinScreenView(
+                score: score,
+                moves: moves,
+                seconds: seconds
+            ) {
+                // Play Again
+                resetGame()
+                seconds = 0
+                showWin = false
+            } share: {
+                // TODO: share sheet
+            }
+        }
     }
     
     /// Top-bar showing  ➝  Score | Time | Moves  ←  spread edge-to-edge.
@@ -247,6 +265,15 @@ struct GameView: View {
         // Append to foundation
         foundations[fIdx].cards.append(card)
         mutateScore(.cardToFoundation)
+        checkForWin()
+    }
+    
+    private func checkForWin() {
+        if foundations.allSatisfy({ $0.cards.count == 13 }) {
+            showWin = true
+            // (Optional) stop the timer so score doesn’t keep dropping
+            gameTimer.upstream.connect().cancel()
+        }
     }
     
     /// Classic Klondike foundation rule.
@@ -388,6 +415,7 @@ struct GameView: View {
         pile.cards.append(card)
         foundations[idx] = pile
         mutateScore(.cardToFoundation)
+        checkForWin()
     }
     
     /// Resets columns, stock, waste, and foundations to a fresh shuffled game.
