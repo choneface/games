@@ -23,40 +23,115 @@ struct GameView: View {
         Dictionary(uniqueKeysWithValues:
             foundations.enumerated().map { ($1.suit, $0) })
     }
+    @State private var score: Int  = 0
+    @State private var moves: Int  = 0
+    @State private var seconds: Int = 0          // elapsed seconds
+    @State private var deckPasses = 0
+
 
     // MARK: – Layout constants
     private let spacing: CGFloat = 8
     private let sidePadding: CGFloat = 8
     private let dealCount: Int = 3
+    private let gameTimer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
     var body: some View {
-        GeometryReader { geo in
-            VStack(spacing: 16) {                                  // ← NEW
-                HStack {
-                    // Foundations left-aligned
-                    foundationRow(cardWidth: calcCardWidth(in: geo))
-                    Spacer()
-                    // Stock & waste right-aligned
-                    StockView(
-                        width: calcCardWidth(in: geo),
-                        stockCount: stock.count,
-                        waste: waste,
-                        dealAction: dealFromStock,
-                        dragEnded: handleWasteDrag,
-                        onDoubleTap: handleWasteDoubleTap
-                    )
-                    .padding(.trailing, sidePadding)
+        ZStack(alignment: .bottom) {
+            // ── Main game layout ─────────────────────────────────────────────
+            GeometryReader { geo in
+                VStack(spacing: 16) {
+                    statsRow()
+                    topRow(in: geo)                    // foundation + stock
+                    tableauRow(cardWidth: calcCardWidth(in: geo), geo: geo)
                 }
-                .zIndex(10)
-
-                // ---------- Existing tableau ----------
-                tableauRow(cardWidth: calcCardWidth(in: geo), geo: geo)
+                .padding(.top, 16)
+                .background(Color.green.ignoresSafeArea())
+                .coordinateSpace(name: "Board")
+                .onReceive(gameTimer) { _ in
+                    seconds += 1
+                }
             }
-            .padding(.top, 16)
-            .background(Color.green.ignoresSafeArea())
-            .coordinateSpace(name: "Board")
+
+            // ── New Game button ──────────────────────────────────────────────
+            Button(action: resetGame) {
+                Text("New Game")
+                    .fontWeight(.semibold)
+                    .padding(.horizontal, 24)
+                    .padding(.vertical, 10)
+                    .background(Color.white.opacity(0.9))
+                    .cornerRadius(8)
+                    .shadow(radius: 2)
+            }
+            .padding(.bottom, 20)
         }
         .navigationTitle("Solitaire")
+    }
+    
+    /// Top-bar showing  ➝  Score | Time | Moves  ←  spread edge-to-edge.
+    @ViewBuilder
+    private func statsRow() -> some View {
+        HStack {
+            // left-aligned
+            statBlock(title: "Score", value: "\(score)")
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+            // centered
+            statBlock(title: "Time", value: timeString(from: seconds))
+                .frame(maxWidth: .infinity, alignment: .center)
+
+            // right-aligned
+            statBlock(title: "Moves", value: "\(moves)")
+                .frame(maxWidth: .infinity, alignment: .trailing)
+        }
+        .padding(.horizontal, sidePadding)     // matches the tableau padding
+        .padding(.top, 8)
+    }
+
+    @ViewBuilder
+    private func statBlock(title: String, value: String) -> some View {
+        VStack(spacing: 2) {
+            // bigger section title
+            Text(title)
+                .font(.subheadline.weight(.semibold))   // was .caption
+            // bigger live value
+            Text(value)
+                .font(.title3.weight(.bold))            // was .headline
+        }
+    }
+
+
+    private func timeString(from secs: Int) -> String {
+        let m = secs / 60
+        let s = secs % 60
+        return String(format: "%02d:%02d", m, s)
+    }
+
+    
+    /// Top bar that shows the four foundations on the left and the stock/waste
+    /// cluster on the right.  Uses the same card width that the tableau does so
+    /// everything stays in proportion on any device size.
+    @ViewBuilder
+    private func topRow(in geo: GeometryProxy) -> some View {
+        let cardWidth = calcCardWidth(in: geo)
+
+        HStack {
+            // Foundations (left-aligned)
+            foundationRow(cardWidth: cardWidth)
+
+            Spacer(minLength: 0)
+
+            // Stock + waste (right-aligned)
+            StockView(
+                width: cardWidth,
+                stockCount: stock.count,
+                waste: waste,
+                dealAction: dealFromStock,
+                dragEnded: handleWasteDrag,
+                onDoubleTap: handleWasteDoubleTap
+            )
+            .padding(.trailing, sidePadding)          // same padding as tableau
+        }
+        .zIndex(10)
     }
 
     // -------------------------------------------------------------------------
@@ -131,8 +206,10 @@ struct GameView: View {
         if let last = columns[origin].indices.last,
            !columns[origin][last].faceUp {
             columns[origin][last].faceUp = true
+            mutateScore(.flipCardUpInRow)
         }
         columns[target].append(contentsOf: dragged)
+        mutateScore(.tableauToTableau)
     }
 
     private func canDrop(_ dragged: [Card], onto targetPile: [Card]) -> Bool {
@@ -161,6 +238,7 @@ struct GameView: View {
 
         // Append to foundation
         foundations[fIdx].cards.append(card)
+        mutateScore(.cardToFoundation)
     }
     
     /// Classic Klondike foundation rule.
@@ -222,6 +300,7 @@ struct GameView: View {
     private func dealFromStock() {
         if stock.isEmpty {
             // ── Re-stock: reverse GROUPS, not individual cards ──────────────
+            deckPasses += 1
             var newStock: [Card] = []
 
             // Chunk waste into groups of `dealCount` cards from bottom to top.
@@ -241,6 +320,7 @@ struct GameView: View {
                 return fresh
             }
             waste.removeAll()
+            mutateScore(.deckPass(passNumber: deckPasses))
             return
         }
 
@@ -282,6 +362,7 @@ struct GameView: View {
         guard waste.last?.id == card.id else { return }  // safety: must be top card
         waste.removeLast()
         columns[target].append(card)
+        mutateScore(.deckToTableau)
     }
     
     /// Right-most waste card was double-tapped.
@@ -298,6 +379,73 @@ struct GameView: View {
         waste.removeLast()
         pile.cards.append(card)
         foundations[idx] = pile
+        mutateScore(.cardToFoundation)
+    }
+    
+    /// Resets columns, stock, waste, and foundations to a fresh shuffled game.
+    private func resetGame() {
+        let deal = Self.dealKlondike()
+        columns     = deal.columns
+        stock       = deal.stock
+        waste.removeAll()
+        foundations = Suit.allCases.map { FoundationPile(suit: $0) }
+        score = 0
+        moves = 0
+        seconds = 0
+    }
+    
+    /// Which scoring event just happened.
+    /// Call `mutateScore(_:)` with the appropriate case every time you mutate
+    /// the model or on every 10-second tick.
+    enum ScoreEvent {
+        // Positive points
+        case cardToFoundation            // +10
+        case deckToTableau               // +5
+        case flipCardUpInRow             // +5
+        case tableauToTableau            // +3
+
+        // Negative points
+        case foundationToTableau         // –15
+        case timePenalty10s              // –2
+        /// Pass through the deck is penalised depending on draw mode & pass #
+        case deckPass(passNumber: Int)
+    }
+
+    /// Adjusts `score` and `moves` according to Standard Klondike rules.
+    private func mutateScore(_ event: ScoreEvent) {
+        var delta = 0
+        switch event {
+
+        // -------------- Positive -----------------------------------
+        case .cardToFoundation:
+            delta += 10; moves += 1
+
+        case .deckToTableau:
+            delta +=  5; moves += 1
+
+        case .flipCardUpInRow:
+            delta +=  5                          // no move increment
+
+        case .tableauToTableau:
+            delta +=  3; moves += 1
+
+        // -------------- Negative -----------------------------------
+        case .foundationToTableau:
+            delta -= 15; moves += 1
+
+        case .timePenalty10s:
+            delta -=  2                          // no move increment
+
+        case .deckPass(let pass):
+            if pass > 4 { delta -= 20; }
+        }
+        
+        if score + delta < 0 {
+            score = 0
+        } else {
+            score += delta
+        }
+        
     }
 
 }
