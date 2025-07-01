@@ -144,7 +144,12 @@ struct GameView: View {
     private func foundationRow(cardWidth: CGFloat) -> some View {
         HStack(spacing: spacing) {
             ForEach(foundations.indices, id: \.self) { idx in
-                FoundationView(pile: foundations[idx], width: cardWidth)
+                FoundationView(
+                    pile: foundations[idx],
+                    width: cardWidth,
+                    index: idx,
+                    dragEnded: handleFoundationDrag      // NEW
+                )
             }
         }
         .padding(.horizontal, sidePadding)
@@ -448,7 +453,33 @@ struct GameView: View {
         } else {
             score += delta
         }
-        
+    }
+    
+    /// Top card of a foundation was dropped somewhere.
+    /// • If the nearest column allows it per Klondike rules, move the card.
+    /// • Otherwise leave the foundation unchanged.
+    private func handleFoundationDrag(card: Card,
+                                      fromFoundation idx: Int,
+                                      drop dropPoint: CGPoint)
+    {
+        // Only proceed if finger is vertically near tableau
+        let yTol: CGFloat = 40
+        guard columnFrames.values.contains(where: { frame in
+            (frame.minY - yTol)...(frame.maxY + yTol) ~= dropPoint.y
+        }) else { return }
+
+        // Nearest column by mid-X
+        guard let target = columnFrames.min(by: { lhs, rhs in
+            abs(dropPoint.x - lhs.value.midX) < abs(dropPoint.x - rhs.value.midX)
+        })?.key else { return }
+
+        // Legality check (King on empty, else descending/alt color)
+        guard canDrop([card], onto: columns[target]) else { return }
+
+        // Mutate model
+        foundations[idx].cards.removeLast()
+        columns[target].append(card)
+        mutateScore(.foundationToTableau)
     }
 
 }
