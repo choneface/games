@@ -40,6 +40,12 @@ struct GameView: View {
     var body: some View {
         ZStack(alignment: .bottom) {
             // ── Main game layout ─────────────────────────────────────────────
+            Rectangle()
+                    .fill(Color("solitaireTopScreenColor"))
+                Rectangle()
+                    .fill(
+                        LinearGradient(gradient: Gradient(stops: [.init(color: Color("TableGreen").opacity(0.0), location: 0.0), .init(color: Color("TableGreen").opacity(1.0), location: 0.2)]), startPoint: .top, endPoint: .bottom)
+                    ).ignoresSafeArea()
             GeometryReader { geo in
                 VStack(spacing: 16) {
                     statsRow()
@@ -47,10 +53,6 @@ struct GameView: View {
                     tableauRow(cardWidth: calcCardWidth(in: geo), geo: geo)
                 }
                 .padding(.top, 16)
-                .background(
-                    Color("TableGreen")
-                        .ignoresSafeArea()
-                )
                 .coordinateSpace(name: "Board")
                 .onReceive(gameTimer) { _ in
                     if !showWin {

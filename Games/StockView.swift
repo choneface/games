@@ -138,7 +138,7 @@ struct StockView: View {
             }
         } else {
             RoundedRectangle(cornerRadius: 6)
-                .stroke(style: StrokeStyle(lineWidth: 2, dash: [6, 4]))
+                .fill(Color.black.opacity(0.2))
         }
     }
     

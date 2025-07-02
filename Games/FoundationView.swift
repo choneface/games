@@ -52,7 +52,7 @@ struct FoundationView: View {
                 } else {
                     // Empty placeholder
                     RoundedRectangle(cornerRadius: 6)
-                        .stroke(style: StrokeStyle(lineWidth: 2, dash: [6, 4]))
+                        .fill(Color.black.opacity(0.2))
                         .overlay(
                             Text(pile.suit.rawValue)
                                 .font(.title2.bold())
