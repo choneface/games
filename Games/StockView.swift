@@ -118,12 +118,58 @@ struct StockView: View {
     @ViewBuilder
     private var stockShape: some View {
         if stockCount > 0 {
-            RoundedRectangle(cornerRadius: 6)
-                .fill(Color.gray)
-                .shadow(radius: 2)
+            // Light-blue grid card back
+            ZStack {
+                // Base light blue
+                RoundedRectangle(cornerRadius: 6)
+                    .fill(Color.white)      // #CCE5FF
+
+                // Vertical grid lines
+                GridLines(spacing: width * 0.15)                          // every ~9 pt
+                    .stroke(Color(red: 0.70, green: 0.80, blue: 0.95), lineWidth: 1)
+
+                // Horizontal grid lines (same spacing)
+                GridLines(spacing: width * 0.15, horizontal: true)
+                    .stroke(Color(red: 0.70, green: 0.80, blue: 0.95), lineWidth: 1)
+
+                // Thin matching border
+                RoundedRectangle(cornerRadius: 6)
+                    .stroke(Color.black, lineWidth: 1)
+            }
         } else {
             RoundedRectangle(cornerRadius: 6)
                 .stroke(style: StrokeStyle(lineWidth: 2, dash: [6, 4]))
+        }
+    }
+    
+    /// Draws evenly-spaced parallel lines inside its rect.
+    /// Set `horizontal` to true for rows, false/default for columns.
+    private struct GridLines: Shape {
+        var spacing: CGFloat
+        var horizontal: Bool = false
+
+        func path(in rect: CGRect) -> Path {
+            var path = Path()
+            if horizontal {
+                var y: CGFloat = 0
+                while y <= rect.height {
+                    if y > 0 && y < rect.height {
+                        path.move(to: CGPoint(x: 0, y: y))
+                        path.addLine(to: CGPoint(x: rect.width, y: y))
+                    }
+                    y += spacing
+                }
+            } else {
+                var x: CGFloat = 0
+                while x <= rect.width {
+                    if x > 0 && x < rect.width {
+                        path.move(to: CGPoint(x: x, y: 0))
+                        path.addLine(to: CGPoint(x: x, y: rect.height))
+                    }
+                    x += spacing
+                }
+            }
+            return path
         }
     }
 

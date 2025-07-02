@@ -42,7 +42,7 @@ struct WinScreenView: View {
             ZStack {
                 // Background gradient
                 LinearGradient(
-                    gradient: Gradient(colors: [Color.black, Color.indigo.opacity(0.8)]),
+                    gradient: Gradient(colors: [Color.blue, Color.indigo.opacity(0.8)]),
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 )
@@ -122,7 +122,7 @@ struct WinScreenView: View {
         private func statColumn(title: String, value: String) -> some View {
             VStack(spacing: 4) {
                 Text(title)
-                    .font(.caption)
+                    .font(.subheadline)
                     .foregroundColor(.black.opacity(0.6))
                 Text(value)
                     .font(.title3.bold())
