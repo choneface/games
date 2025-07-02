@@ -116,10 +116,10 @@ struct GameView: View {
         VStack(spacing: 2) {
             // bigger section title
             Text(title)
-                .font(.subheadline.weight(.semibold))   // was .caption
+                .font(.headline)   // was .caption
             // bigger live value
             Text(value)
-                .font(.title3.weight(.bold))            // was .headline
+                .font(.title3.weight(.semibold))            // was .headline
         }
     }
 
