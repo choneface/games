@@ -47,7 +47,10 @@ struct GameView: View {
                     tableauRow(cardWidth: calcCardWidth(in: geo), geo: geo)
                 }
                 .padding(.top, 16)
-                .background(Color.green.ignoresSafeArea())
+                .background(
+                    Color("TableGreen")
+                        .ignoresSafeArea()
+                )
                 .coordinateSpace(name: "Board")
                 .onReceive(gameTimer) { _ in
                     if !showWin {
