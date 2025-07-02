@@ -9,29 +9,49 @@ import SwiftUI
 
 /// A single foundation pile. Its top card is draggable onto the tableau.
 struct FoundationView: View {
-    // Inputs
+    // Inputs --------------------------------------------------------------
     var pile: FoundationPile
     let width: CGFloat
-    let index: Int                          // which foundation in GameView
-    let dragEnded: (_ card: Card, _ fromFoundation: Int, _ drop: CGPoint) -> Void
+    let index: Int
+    let dragEnded: (_ card: Card,
+                    _ fromFoundation: Int,
+                    _ drop: CGPoint) -> Void
 
-    // Drag state
+    // Drag state ----------------------------------------------------------
     @State private var dragged: Card? = nil
     @State private var offset:   CGSize = .zero
 
-    // Layout
+    // Layout --------------------------------------------------------------
     private var height: CGFloat { width * 1.5 }
 
+    /// Card that is *immediately* under the top card (if any)
+    private var belowTopCard: Card? {
+        guard pile.cards.count > 1 else { return nil }
+        return pile.cards[pile.cards.count - 2]
+    }
+
+    // --------------------------------------------------------------------
+    // MARK: – Body
+    // --------------------------------------------------------------------
     var body: some View {
         GeometryReader { proxy in
             ZStack {
-                // Top card if any
+                // ── (1) Second-from-top card – shows while top is dragging ──
+                if let under = belowTopCard {
+                    CardPlaceholder(faceUp: true,
+                                    width: width,
+                                    label: under.value,
+                                    isRed: under.isRed)
+                        .zIndex(0)                       // always at the back
+                }
+
+                // ── (2) Top card – the one the user can drag ──────────────
                 if let card = pile.topCard {
                     CardPlaceholder(faceUp: true,
                                     width: width,
                                     label: card.value,
                                     isRed: card.isRed)
-                        .opacity(dragged?.id == card.id ? 0 : 1)
+                        .opacity(dragged?.id == card.id ? 0 : 1) // hide while moving
                         .gesture(
                             DragGesture()
                                 .onChanged { value in
@@ -39,36 +59,41 @@ struct FoundationView: View {
                                     offset = value.translation
                                 }
                                 .onEnded { value in
-                                    let origin = proxy.frame(in: .named("Board")).origin
+                                    let origin = proxy
+                                        .frame(in: .named("Board")).origin
                                     let dropPt = CGPoint(x: origin.x + value.location.x,
                                                          y: origin.y + value.location.y)
                                     dragEnded(card, index, dropPt)
 
-                                    // reset local drag state
+                                    // Reset local drag state
                                     dragged = nil
                                     offset  = .zero
                                 }
                         )
+                        .zIndex(1)                       // sits above “under” card
                 } else {
-                    // Empty placeholder
+                    // ── (2b) Empty placeholder when pile is empty ─────────
                     RoundedRectangle(cornerRadius: 6)
                         .fill(Color.black.opacity(0.2))
                         .overlay(
                             Text(pile.suit.rawValue)
                                 .font(.title2.bold())
-                                .foregroundColor(pile.suit.isRed ? .red.opacity(0.5)
-                                                                : .black.opacity(0.5))
+                                .foregroundColor(
+                                    pile.suit.isRed
+                                        ? .red.opacity(0.5)
+                                        : .black.opacity(0.5))
                         )
+                        .zIndex(1)
                 }
 
-                // Floating copy
+                // ── (3) Floating copy that follows the finger ─────────────
                 if let card = dragged {
                     CardPlaceholder(faceUp: true,
                                     width: width,
                                     label: card.value,
                                     isRed: card.isRed)
                         .offset(offset)
-                        .zIndex(3)
+                        .zIndex(20)                       // always on top
                 }
             }
         }
