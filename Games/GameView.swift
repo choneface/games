@@ -221,7 +221,7 @@ struct GameView: View {
     }
 
     // -------------------------------------------------------------------------
-    // MARK: – Drop handling (unchanged)
+    // MARK: – Drop handling
     // -------------------------------------------------------------------------
     private func handleDrop(_ dragged: [Card],
                             from origin: Int,
@@ -249,28 +249,6 @@ struct GameView: View {
         guard let targetTop = targetPile.last else { return false }
         return movingTop.rank == targetTop.rank - 1
             && movingTop.isRed != targetTop.isRed
-    }
-    
-    private func handleDoubleTap(card: Card, from column: Int) {
-        guard let suit = card.suit,
-              let fIdx = foundationIndex[suit] else { return }
-
-        let pile = foundations[fIdx]
-        guard canPlaceOnFoundation(card: card, pile: pile) else { return } // NEW ✔︎
-
-        // Remove the TOP card only (we already know it's valid & on top)
-        columns[column].removeLast()
-
-        // Flip newly exposed card if needed
-        if let last = columns[column].indices.last,
-           !columns[column][last].faceUp {
-            columns[column][last].faceUp = true
-        }
-
-        // Append to foundation
-        foundations[fIdx].cards.append(card)
-        mutateScore(.cardToFoundation)
-        checkForWin()
     }
     
     private func checkForWin() {
@@ -376,53 +354,6 @@ struct GameView: View {
         })
     }
     
-    /// Drop handler for the right-most waste card.
-    /// • If the finger isn’t vertically near *any* column, we cancel.
-    /// • Otherwise we pick the nearest column by mid-X.
-    /// • If that column fails the Klondike rule, we cancel.
-    /// • Only when both checks pass do we mutate `waste` and `columns`.
-    private func handleWasteDrag(card: Card, dropPoint: CGPoint) {
-        let yTolerance: CGFloat = 0         // pts above / below column band
-
-        // 1. Ensure the finger is roughly in the vertical strip of *some* column.
-        guard columnFrames.values.contains(where: { frame in
-            (frame.minY - yTolerance)...(frame.maxY + yTolerance)
-                ~= dropPoint.y
-        }) else { return }                   // cancel: drop far above/below tableau
-
-        // 2. Find the single nearest column by mid-X (regardless of legality).
-        guard let target = columnFrames.min(by: { lhs, rhs in
-            abs(dropPoint.x - lhs.value.midX) < abs(dropPoint.x - rhs.value.midX)
-        })?.key else { return }
-
-        // 3. Check Klondike legality for *that* pile.
-        guard canDrop([card], onto: columns[target]) else { return }  // cancel
-
-        // 4. Move card: remove from waste, append to tableau.
-        guard waste.last?.id == card.id else { return }  // safety: must be top card
-        waste.removeLast()
-        columns[target].append(card)
-        mutateScore(.deckToTableau)
-    }
-    
-    /// Right-most waste card was double-tapped.
-    /// If the move is legal for its suit foundation, push it; else do nothing.
-    private func handleWasteDoubleTap(card: Card) {
-        guard waste.last?.id == card.id else { return }                 // must be top waste
-        guard let suit = card.suit,
-              let idx  = foundationIndex[suit] else { return }
-
-        var pile = foundations[idx]
-        guard canPlaceOnFoundation(card: card, pile: pile) else { return }
-
-        // mutate models
-        waste.removeLast()
-        pile.cards.append(card)
-        foundations[idx] = pile
-        mutateScore(.cardToFoundation)
-        checkForWin()
-    }
-    
     /// Resets columns, stock, waste, and foundations to a fresh shuffled game.
     private func resetGame() {
         let deal = Self.dealKlondike()
@@ -488,31 +419,152 @@ struct GameView: View {
         }
     }
     
-    /// Top card of a foundation was dropped somewhere.
-    /// • If the nearest column allows it per Klondike rules, move the card.
-    /// • Otherwise leave the foundation unchanged.
+    // -----------------------------------------------------------------------------
+    // MARK: – Move model
+    // -----------------------------------------------------------------------------
+    enum Pile {
+        case column(Int)          // tableau
+        case foundation(Int)
+        case waste
+    }
+
+    struct Move {
+        var cards: [Card]         // one or many cards (tableau drag)
+        var from:  Pile
+        var to:    Pile
+        var scoreEvent: ScoreEvent
+    }
+
+    // -----------------------------------------------------------------------------
+    // MARK: – Public “thin” gesture handlers
+    // -----------------------------------------------------------------------------
+    /// Table-to-table drag
+    private func handleColumnDrag(_ dragged: [Card],
+                                  from origin: Int,
+                                  at dropPoint: CGPoint)
+    {
+        guard let target = nearestColumn(to: dropPoint),
+              target != origin else { return }
+
+        apply(move: Move(cards: dragged,
+                         from: .column(origin),
+                         to:   .column(target),
+                         scoreEvent: .tableauToTableau))
+    }
+
+    /// Double-tap in a tableau column → foundation
+    private func handleDoubleTap(card: Card, from column: Int) {
+        guard let suit = card.suit,
+              let fIdx = foundationIndex[suit] else { return }
+
+        apply(move: Move(cards: [card],
+                         from: .column(column),
+                         to:   .foundation(fIdx),
+                         scoreEvent: .cardToFoundation))
+    }
+
+    /// Waste drag → tableau
+    private func handleWasteDrag(card: Card, dropPoint: CGPoint) {
+        guard let target = nearestColumn(to: dropPoint) else { return }
+
+        apply(move: Move(cards: [card],
+                         from: .waste,
+                         to:   .column(target),
+                         scoreEvent: .deckToTableau))
+    }
+
+    /// Waste double-tap → foundation
+    private func handleWasteDoubleTap(card: Card) {
+        guard let suit = card.suit,
+              let fIdx = foundationIndex[suit] else { return }
+
+        apply(move: Move(cards: [card],
+                         from: .waste,
+                         to:   .foundation(fIdx),
+                         scoreEvent: .cardToFoundation))
+    }
+
+    /// Foundation drag → tableau
     private func handleFoundationDrag(card: Card,
                                       fromFoundation idx: Int,
                                       drop dropPoint: CGPoint)
     {
-        // Only proceed if finger is vertically near tableau
-        let yTol: CGFloat = 40
-        guard columnFrames.values.contains(where: { frame in
-            (frame.minY - yTol)...(frame.maxY + yTol) ~= dropPoint.y
-        }) else { return }
+        guard let target = nearestColumn(to: dropPoint) else { return }
 
-        // Nearest column by mid-X
-        guard let target = columnFrames.min(by: { lhs, rhs in
-            abs(dropPoint.x - lhs.value.midX) < abs(dropPoint.x - rhs.value.midX)
-        })?.key else { return }
+        apply(move: Move(cards: [card],
+                         from: .foundation(idx),
+                         to:   .column(target),
+                         scoreEvent: .foundationToTableau))
+    }
 
-        // Legality check (King on empty, else descending/alt color)
-        guard canDrop([card], onto: columns[target]) else { return }
+    // -----------------------------------------------------------------------------
+    // MARK: – Shared rules + state mutation
+    // -----------------------------------------------------------------------------
+    private func apply(move: Move) {
+        // 1. Validate legality ----------------------------------------------------
+        guard canMove(move.cards,
+                      from: move.from,
+                      to:   move.to) else { return }
 
-        // Mutate model
-        foundations[idx].cards.removeLast()
-        columns[target].append(card)
-        mutateScore(.foundationToTableau)
+        // 2. Mutate source pile ---------------------------------------------------
+        switch move.from {
+        case .column(let idx):
+            columns[idx].removeLast(move.cards.count)
+            // flip newly exposed card
+            if let last = columns[idx].indices.last,
+               !columns[idx][last].faceUp {
+                columns[idx][last].faceUp = true
+                mutateScore(.flipCardUpInRow)
+            }
+        case .foundation(let idx):
+            foundations[idx].cards.removeLast()
+        case .waste:
+            waste.removeLast()
+        }
+
+        // 3. Mutate destination pile ---------------------------------------------
+        switch move.to {
+        case .column(let idx):
+            columns[idx].append(contentsOf: move.cards)
+        case .foundation(let idx):
+            foundations[idx].cards.append(contentsOf: move.cards)
+        case .waste: break                                    // never used
+        }
+
+        // 4. Scoring / win check --------------------------------------------------
+        mutateScore(move.scoreEvent)
+        if case .foundation = move.to { checkForWin() }
+    }
+
+    /// Core Klondike legality checks
+    private func canMove(_ dragged: [Card],
+                         from: Pile,
+                         to:   Pile) -> Bool
+    {
+        guard let top = dragged.first else { return false }
+
+        switch to {
+        case .column(let idx):
+            let target = columns[idx]
+            if target.isEmpty { return top.rank == 13 }               // King on empty
+            guard let dstTop = target.last else { return false }
+            return top.rank == dstTop.rank - 1 && top.isRed != dstTop.isRed
+
+        case .foundation(let idx):
+            let pile = foundations[idx]
+            if pile.cards.isEmpty { return top.rank == 1 }            // Ace starts
+            guard let dstTop = pile.topCard else { return false }
+            return top.rank == dstTop.rank + 1
+
+        case .waste:
+            return false                                             // never legal
+        }
+    }
+
+    /// Translate a touch/drop point to the closest tableau column index
+    private func nearestColumn(to point: CGPoint) -> Int? {
+        columnFrames.min { abs(point.x - $0.value.midX) <
+                           abs(point.x - $1.value.midX) }?.key
     }
 
 }
