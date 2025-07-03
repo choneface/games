@@ -39,12 +39,19 @@ struct MineSweeperGameView: View {
     @State private var win      = false
     
     // Zoom
-    @State private var zoom: CGFloat = 1         // current scale
-    @State private var lastMagnification: CGFloat = 1
-    let zoomRange: ClosedRange<CGFloat> = 1...4  // 1×–4×
+    @State private var zoom: CGFloat = 1.0          // persists after gesture ends
+    @GestureState private var pinch: CGFloat = 1.0  // live during the gesture
 
     // MARK: - Body
     var body: some View {
+        let magnify = MagnificationGesture()
+                    .updating($pinch) { value, state, _ in       // live update
+                        state = value
+                    }
+                    .onEnded { value in                          // commit on lift
+                        zoom = (zoom * value).clamped(to: 0.5...4)
+                    }
+        
         VStack(spacing: 12) {
 
             // Score-bug style header (flags left, status centre, mines right)
@@ -86,8 +93,10 @@ struct MineSweeperGameView: View {
                     height: tile * CGFloat(rows),
                     alignment: .topLeading
                 )
+                .scaleEffect(zoom * pinch, anchor: .center)
+                .animation(.easeInOut(duration: 1), value: zoom)
             }
-            .background(Color.red)
+            .simultaneousGesture(magnify)
             
             Button(action: newGame) {
                 Text("New Game")
@@ -98,6 +107,7 @@ struct MineSweeperGameView: View {
                     .cornerRadius(8)
                     .shadow(radius: 2)
             }
+            .padding(.bottom, 20)
         }
         .padding(.top, 16)
         .navigationTitle("Minesweeper")
@@ -150,6 +160,10 @@ struct MineSweeperGameView: View {
                     .filter { board[$0.r][$0.c].isMine }.count
             }
         }
+    }
+    
+    private func snapBack() {
+        zoom = 1.0
     }
 
     private func reveal(_ r: Int, _ c: Int) {
