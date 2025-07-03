@@ -14,6 +14,9 @@ struct ContentView: View {
                 NavigationLink(destination: GameView()) {
                     Text("Solitaire")
                 }
+                NavigationLink(destination: MineSweeperGameView()) {
+                    Text("Minesweeper")
+                }
                 // Add more games here later
             }
             .navigationTitle("Games")
