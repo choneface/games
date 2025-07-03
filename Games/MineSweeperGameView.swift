@@ -44,17 +44,57 @@ struct MineSweeperGameView: View {
 
     // MARK: - Body
     var body: some View {
-        let magnify = MagnificationGesture()
-                    .updating($pinch) { value, state, _ in       // live update
-                        state = value
-                    }
-                    .onEnded { value in                          // commit on lift
-                        zoom = (zoom * value).clamped(to: 0.5...4)
-                    }
-        
-        VStack(spacing: 12) {
 
-            // Score-bug style header (flags left, status centre, mines right)
+            let magnify = MagnificationGesture()
+                .updating($pinch) { value, state, _ in
+                    state = value
+                }
+                .onEnded { value in
+                    zoom = (zoom * value).clamped(to: 0.5...4)
+                }
+
+            ZStack {
+                VStack(spacing: 0) {
+                    Rectangle()
+                        .fill(Color.white)
+                        .frame(maxHeight: 1)
+                    ScrollView([.horizontal, .vertical], showsIndicators: false) {
+                        LazyVGrid(
+                            columns: Array(repeating: GridItem(.fixed(tile), spacing: 0),
+                                           count: cols),
+                            spacing: 0
+                        ) {
+                            ForEach(board.indices, id: \.self) { r in
+                                ForEach(board[r].indices, id: \.self) { c in
+                                    tileView(board[r][c])
+                                        .id(r * cols + c)             // unique ID
+                                        .frame(width: tile, height: tile)
+                                        .onTapGesture       { reveal(r, c) }
+                                        .onLongPressGesture { flag(r, c) }
+                                }
+                            }
+                        }
+                        .frame(
+                            width:  tile * CGFloat(cols),
+                            height: tile * CGFloat(rows),
+                            alignment: .topLeading
+                        )
+                        .scaleEffect(zoom * pinch)
+                        .animation(.easeInOut(duration: 0.2), value: zoom)
+                    }
+                    .simultaneousGesture(magnify)
+                }
+            }
+            // ── Overlays that float on top ────────────────────────────────────
+            .overlay(scoreBug.padding(.horizontal),  alignment: .top)      // header
+            .overlay(newGameButton.padding(.bottom, 20), alignment: .bottom)
+            .padding(.top, 16)         // extra breathing-room for nav-bar
+            .navigationTitle("Minesweeper")
+            .onAppear(perform: newGame)
+        }
+
+        // ── Extracted sub-views ───────────────────────────────────────────────
+        private var scoreBug: some View {
             HStack {
                 Text("Flags: \(flagsRemaining)")
                 Spacer()
@@ -69,35 +109,9 @@ struct MineSweeperGameView: View {
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
                     .fill(Color.black.opacity(0.2))
             )
-            .padding(.horizontal)
+        }
 
-            // Game grid
-            ScrollView([.horizontal, .vertical], showsIndicators: false) {
-                LazyVGrid(
-                    columns: Array(repeating: GridItem(.fixed(tile), spacing: 0), count: cols),
-                    spacing: 0
-                ) {
-                    ForEach(board.indices, id: \.self) { r in
-                        ForEach(board[r].indices, id: \.self) { c in
-                            // r * cols + c is unique for every (row, col) pair
-                            tileView(board[r][c])
-                                .id(r * cols + c)
-                                .frame(width: tile, height: tile)
-                                .onTapGesture       { reveal(r, c) }
-                                .onLongPressGesture { flag(r, c) }
-                        }
-                    }
-                }
-                .frame(
-                    width:  tile * CGFloat(cols),
-                    height: tile * CGFloat(rows),
-                    alignment: .topLeading
-                )
-                .scaleEffect(zoom * pinch, anchor: .center)
-                .animation(.easeInOut(duration: 1), value: zoom)
-            }
-            .simultaneousGesture(magnify)
-            
+        private var newGameButton: some View {
             Button(action: newGame) {
                 Text("New Game")
                     .fontWeight(.semibold)
@@ -107,12 +121,7 @@ struct MineSweeperGameView: View {
                     .cornerRadius(8)
                     .shadow(radius: 2)
             }
-            .padding(.bottom, 20)
         }
-        .padding(.top, 16)
-        .navigationTitle("Minesweeper")
-        .onAppear(perform: newGame)
-    }
 
     // MARK: - Tile View
     @ViewBuilder
@@ -160,10 +169,6 @@ struct MineSweeperGameView: View {
                     .filter { board[$0.r][$0.c].isMine }.count
             }
         }
-    }
-    
-    private func snapBack() {
-        zoom = 1.0
     }
 
     private func reveal(_ r: Int, _ c: Int) {
