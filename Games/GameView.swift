@@ -121,7 +121,13 @@ struct GameView: View {
             statBlock(title: "Moves", value: "\(moves)")
                 .frame(maxWidth: .infinity, alignment: .trailing)
         }
-        .padding(.horizontal, sidePadding)     // matches the tableau padding
+        .padding(.vertical, 10)                  // inner breathing room
+        .padding(.horizontal, 32)
+        .background(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(Color.black.opacity(0.3))
+        )
+        .padding(.horizontal, sidePadding)      // keep same outer edge inset
         .padding(.top, 8)
     }
 
@@ -133,7 +139,7 @@ struct GameView: View {
                 .font(.headline)   // was .caption
             // bigger live value
             Text(value)
-                .font(.title3.weight(.semibold))            // was .headline
+                .font(.title3)            // was .headline
         }
     }
 
@@ -141,7 +147,10 @@ struct GameView: View {
     private func timeString(from secs: Int) -> String {
         let m = secs / 60
         let s = secs % 60
-        return String(format: "%02d:%02d", m, s)
+        if m > 9 {
+            return String(format: "%02d:%02d", m, s)
+        }
+        return String(format: "%01d:%02d", m, s)
     }
 
     
