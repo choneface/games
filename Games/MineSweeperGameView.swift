@@ -72,7 +72,7 @@ struct MineSweeperGameView: View {
     // ── Sub-views ───────────────────────────────────────────────────────────────
     private var boardView: some View {
         VStack(spacing: 0) {
-            Divider().background(Color.white)    // top border
+            Divider().background(Color("solitaireTopScreenColor"))    // top border
 
             ScrollView([.horizontal, .vertical], showsIndicators: false) {
                 gridView
@@ -189,7 +189,7 @@ struct MineSweeperGameView: View {
 
             if t.isRevealed {
                 Rectangle()
-                    .fill(Color.white.opacity(0.9))
+                    .fill(Color("solitaireTopScreenColor").opacity(0.9))
                 if t.isMine {
                     Text("💣")
                 } else if t.adjacent > 0 {
