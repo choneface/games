@@ -38,6 +38,11 @@ struct MineSweeperGameView: View {
     @State private var gameOver = false
     @State private var win      = false
     
+    @State private var seconds = 0                     // elapsed game time
+    private let gameTimer = Timer
+        .publish(every: 1, on: .main, in: .common)
+        .autoconnect()
+    
     // Zoom
     @State private var zoom: CGFloat = 1.0          // persists after gesture ends
     @GestureState private var pinch: CGFloat = 1.0  // live during the gesture
@@ -91,25 +96,51 @@ struct MineSweeperGameView: View {
             .padding(.top, 16)         // extra breathing-room for nav-bar
             .navigationTitle("Minesweeper")
             .onAppear(perform: newGame)
+            .onReceive(gameTimer) { _ in
+                if !gameOver && !win {
+                    seconds += 1
+                }
+            }
         }
 
         // ── Extracted sub-views ───────────────────────────────────────────────
         private var scoreBug: some View {
             HStack {
-                Text("Flags: \(flagsRemaining)")
+                statBlock(title: "Flags", value: "\(flagsRemaining)")
                 Spacer()
-                Text(win ? "🎉 You win!" : gameOver ? "💥 Boom!" : " ")
-                    .fontWeight(.semibold)
+                Text(timeString)
+                    .monospacedDigit()
                 Spacer()
-                Text("Mines: \(mineCount)")
+                statBlock(title: "Mines", value: "\(mineCount)")
             }
-            .padding(.vertical, 6)
-            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+            .padding(.horizontal, 32)
             .background(
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .fill(Color.black.opacity(0.2))
+                    .fill(Color.black.opacity(0.3))
             )
         }
+    
+    @ViewBuilder
+    private func statBlock(title: String, value: String) -> some View {
+        VStack(spacing: 2) {
+            // bigger section title
+            Text(title)
+                .font(.headline)   // was .caption
+            // bigger live value
+            Text(value)
+                .font(.title3)            // was .headline
+        }
+    }
+    
+    private var timeString: String {
+        let m = seconds / 60
+        let s = seconds % 60
+        if m > 0 {
+            return String(format: "%02d:%02d", seconds / 60, seconds % 60)
+        }
+        return String(format: "%01d:%02d", seconds / 60, seconds % 60)
+    }
 
         private var newGameButton: some View {
             Button(action: newGame) {
@@ -149,7 +180,7 @@ struct MineSweeperGameView: View {
 
     // MARK: - Game logic
     private func newGame() {
-        gameOver = false; win = false
+        gameOver = false; win = false; seconds = 0
         board = Array(repeating: Array(repeating: Tile(), count: cols), count: rows)
 
         // Place mines
