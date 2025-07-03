@@ -64,15 +64,27 @@ struct GameView: View {
                 }
             }
 
-            // ── New Game button ──────────────────────────────────────────────
-            Button(action: resetGame) {
-                Text("New Game")
-                    .fontWeight(.semibold)
-                    .padding(.horizontal, 24)
-                    .padding(.vertical, 10)
-                    .background(Color.white.opacity(0.9))
-                    .cornerRadius(8)
-                    .shadow(radius: 2)
+            HStack(spacing: 16) {
+                Button(action: resetGame) {
+                    Text("New Game")
+                        .fontWeight(.semibold)
+                        .padding(.horizontal, 24)
+                        .padding(.vertical, 10)
+                        .background(Color.white.opacity(0.9))
+                        .cornerRadius(8)
+                        .shadow(radius: 2)
+                }
+                Button(action: undo) {
+                    Text("Undo")
+                        .fontWeight(.semibold)
+                        .padding(.horizontal, 24)
+                        .padding(.vertical, 10)
+                        .background(Color.red.opacity(0.9))
+                        .foregroundColor(.white)
+                        .cornerRadius(8)
+                        .shadow(radius: 2)
+                }
+                
             }
             .padding(.bottom, 20)
         }
@@ -233,6 +245,7 @@ struct GameView: View {
         guard target != origin else { return }
         guard canDrop(dragged, onto: columns[target]) else { return }
 
+        pushSnapshot()
         columns[origin].removeLast(dragged.count)
         if let last = columns[origin].indices.last,
            !columns[origin][last].faceUp {
@@ -316,6 +329,7 @@ struct GameView: View {
     }
     
     private func dealFromStock() {
+        pushSnapshot()
         if stock.isEmpty {
             // ── Re-stock: reverse GROUPS, not individual cards ──────────────
             deckPasses += 1
@@ -435,23 +449,6 @@ struct GameView: View {
         var scoreEvent: ScoreEvent
     }
 
-    // -----------------------------------------------------------------------------
-    // MARK: – Public “thin” gesture handlers
-    // -----------------------------------------------------------------------------
-    /// Table-to-table drag
-    private func handleColumnDrag(_ dragged: [Card],
-                                  from origin: Int,
-                                  at dropPoint: CGPoint)
-    {
-        guard let target = nearestColumn(to: dropPoint),
-              target != origin else { return }
-
-        apply(move: Move(cards: dragged,
-                         from: .column(origin),
-                         to:   .column(target),
-                         scoreEvent: .tableauToTableau))
-    }
-
     /// Double-tap in a tableau column → foundation
     private func handleDoubleTap(card: Card, from column: Int) {
         guard let suit = card.suit,
@@ -501,11 +498,16 @@ struct GameView: View {
     // MARK: – Shared rules + state mutation
     // -----------------------------------------------------------------------------
     private func apply(move: Move) {
+        print("in apply!")
         // 1. Validate legality ----------------------------------------------------
         guard canMove(move.cards,
                       from: move.from,
                       to:   move.to) else { return }
 
+        print("history length before: \(history.count)")
+        pushSnapshot()
+        print("history length after: \(history.count)")
+        
         // 2. Mutate source pile ---------------------------------------------------
         switch move.from {
         case .column(let idx):
@@ -565,6 +567,45 @@ struct GameView: View {
     private func nearestColumn(to point: CGPoint) -> Int? {
         columnFrames.min { abs(point.x - $0.value.midX) <
                            abs(point.x - $1.value.midX) }?.key
+    }
+    
+    // ─────────────────────────────────────────────────────────────────────────────
+    // 1. Add snapshot model + stack
+    // ─────────────────────────────────────────────────────────────────────────────
+    private struct Snapshot {
+        let columns: [[Card]]
+        let stock:   [Card]
+        let waste:   [Card]
+        let foundations: [FoundationPile]
+        let score:   Int
+        let moves:   Int
+        let deckPasses: Int
+    }
+
+    @State private var history: [Snapshot] = []
+
+    private func pushSnapshot() {
+        history.append(
+            Snapshot(columns: columns,
+                     stock: stock,
+                     waste: waste,
+                     foundations: foundations,
+                     score: score,
+                     moves: moves,
+                     deckPasses: deckPasses))
+    }
+
+    private func undo() {
+        print("history length: \(history.count)")
+        guard let snap = history.popLast() else { return }
+        columns      = snap.columns
+        stock        = snap.stock
+        waste        = snap.waste
+        foundations  = snap.foundations
+        score        = snap.score
+        moves        = snap.moves
+        deckPasses   = snap.deckPasses
+        showWin      = false                // in case we just undid the winning move
     }
 
 }
