@@ -48,78 +48,104 @@ struct MineSweeperGameView: View {
     @GestureState private var pinch: CGFloat = 1.0  // live during the gesture
 
     // MARK: - Body
+    // ── Main View ──────────────────────────────────────────────────────────────
     var body: some View {
+        ZStack {                                // base layer = board
+            boardView
+        }
+        .overlay(scoreBug.padding(.horizontal), alignment: .top)      // header
+        .overlay(newGameButton.padding(.bottom, 20), alignment: .bottom)
 
-            let magnify = MagnificationGesture()
-                .updating($pinch) { value, state, _ in
-                    state = value
-                }
-                .onEnded { value in
-                    zoom = (zoom * value).clamped(to: 0.5...4)
-                }
+        // navigation + life-cycle
+        .navigationTitle("Minesweeper")
+        .padding(.top, 16)                      // breathing-room for nav-bar
+        .onAppear(perform: newGame)
+        .onReceive(gameTimer) { _ in
+            if !gameOver && !win { seconds += 1 }
+        }
 
-            ZStack {
-                VStack(spacing: 0) {
-                    Rectangle()
-                        .fill(Color.white)
-                        .frame(maxHeight: 1)
-                    ScrollView([.horizontal, .vertical], showsIndicators: false) {
-                        LazyVGrid(
-                            columns: Array(repeating: GridItem(.fixed(tile), spacing: 0),
-                                           count: cols),
-                            spacing: 0
-                        ) {
-                            ForEach(board.indices, id: \.self) { r in
-                                ForEach(board[r].indices, id: \.self) { c in
-                                    tileView(board[r][c])
-                                        .id(r * cols + c)             // unique ID
-                                        .frame(width: tile, height: tile)
-                                        .onTapGesture       { reveal(r, c) }
-                                        .onLongPressGesture { flag(r, c) }
-                                }
-                            }
-                        }
-                        .frame(
-                            width:  tile * CGFloat(cols),
-                            height: tile * CGFloat(rows),
-                            alignment: .topLeading
-                        )
-                        .scaleEffect(zoom * pinch)
-                        .animation(.easeInOut(duration: 0.2), value: zoom)
-                    }
-                    .simultaneousGesture(magnify)
-                }
+        // win / lose overlays
+        .fullScreenCover(isPresented: $win,      content: winScreen)
+        .fullScreenCover(isPresented: $gameOver, content: loseScreen)
+    }
+
+    // ── Sub-views ───────────────────────────────────────────────────────────────
+    private var boardView: some View {
+        VStack(spacing: 0) {
+            Divider().background(Color.white)    // top border
+
+            ScrollView([.horizontal, .vertical], showsIndicators: false) {
+                gridView
+                    .frame(width:  tile * CGFloat(cols),
+                           height: tile * CGFloat(rows),
+                           alignment: .topLeading)
+                    .scaleEffect(zoom * pinch)
+                    .animation(.easeInOut(duration: 0.2), value: zoom)
             }
-            // ── Overlays that float on top ────────────────────────────────────
-            .overlay(scoreBug.padding(.horizontal),  alignment: .top)      // header
-            .overlay(newGameButton.padding(.bottom, 20), alignment: .bottom)
-            .padding(.top, 16)         // extra breathing-room for nav-bar
-            .navigationTitle("Minesweeper")
-            .onAppear(perform: newGame)
-            .onReceive(gameTimer) { _ in
-                if !gameOver && !win {
-                    seconds += 1
+            .simultaneousGesture(magnifyGesture)
+        }
+    }
+
+    private var gridView: some View {
+        LazyVGrid(columns: gridColumns, spacing: 0) {
+            ForEach(board.indices, id: \.self) { r in
+                ForEach(board[r].indices, id: \.self) { c in
+                    tileView(board[r][c])
+                        .id(r * cols + c)
+                        .frame(width: tile, height: tile)
+                        .onTapGesture       { reveal(r, c) }
+                        .onLongPressGesture { flag(r, c) }
                 }
             }
         }
+    }
 
-        // ── Extracted sub-views ───────────────────────────────────────────────
-        private var scoreBug: some View {
-            HStack {
-                statBlock(title: "Flags", value: "\(flagsRemaining)")
-                Spacer()
-                Text(timeString)
-                    .monospacedDigit()
-                Spacer()
-                statBlock(title: "Mines", value: "\(mineCount)")
+    // ── Helpers ────────────────────────────────────────────────────────────────
+    private var gridColumns: [GridItem] {
+        Array(repeating: GridItem(.fixed(tile), spacing: 0), count: cols)
+    }
+
+    private var magnifyGesture: some Gesture {
+        MagnificationGesture()
+            .updating($pinch) { value, state, _ in state = value }
+            .onEnded { value in zoom = (zoom * value).clamped(to: 0.5...4) }
+    }
+
+    // Win / lose screen builders
+    private func winScreen()  -> some View {
+        MineSweeperWinScreenView(
+            bombs: mineCount, cols: cols, rows: rows, seconds: seconds,
+            playAgain: { newGame() }, share: { /* TODO */ }
+        )
+    }
+
+    private func loseScreen() -> some View {
+        MineSweeperLoseScreenView(
+            bombs: mineCount, cols: cols, rows: rows, seconds: seconds,
+            playAgain: { newGame() }, revealBoard: {
+                revealAll()
+                gameOver = false
             }
-            .padding(.vertical, 10)
-            .padding(.horizontal, 32)
-            .background(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .fill(Color.black.opacity(0.3))
-            )
+        )
+    }
+
+    // ── Extracted sub-views ───────────────────────────────────────────────
+    private var scoreBug: some View {
+        HStack {
+            statBlock(title: "Flags", value: "\(flagsRemaining)")
+            Spacer()
+            Text(timeString)
+                .monospacedDigit()
+            Spacer()
+            statBlock(title: "Mines", value: "\(mineCount)")
         }
+        .padding(.vertical, 10)
+        .padding(.horizontal, 32)
+        .background(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(Color.black.opacity(0.3))
+        )
+    }
     
     @ViewBuilder
     private func statBlock(title: String, value: String) -> some View {
@@ -202,6 +228,16 @@ struct MineSweeperGameView: View {
         }
     }
 
+    /// Reveals every tile on the board—used for the “lose” screen.
+    /// Unlike `reveal(_:_: )` it ignores flags, mines, and win/lose state.
+    private func revealAll() {
+        for r in 0..<rows {
+            for c in 0..<cols {
+                board[r][c].isRevealed = true
+            }
+        }
+    }
+    
     private func reveal(_ r: Int, _ c: Int) {
         guard inBounds(r, c),
               !board[r][c].isRevealed,
